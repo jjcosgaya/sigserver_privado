@@ -61,7 +61,7 @@ class SigmallyProtocol extends Protocol {
 
                 if (
                     typeof body.name !== "string"
-                    || typeof body.skin !== "string"
+                    || (body.skin && typeof body.skin !== "string")
                     || (body.clan && typeof body.clan !== "string")
                 )
                     return void console.log(body), this.connection.close();
@@ -74,7 +74,7 @@ class SigmallyProtocol extends Protocol {
 
                 this.connection.spawningAttributes = {
                     name: body.name,
-                    skin: body.skin.substring(0, 20),
+                    skin: body.skin ? body.skin.substring(0, 20) : "",
                     spectating,
                     clan: body.clan || "",
                     showClanmates: !!body.showClanmates,
