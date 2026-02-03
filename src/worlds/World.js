@@ -294,6 +294,8 @@ class World {
 
         let eatL = 0;
         let rigidL = 0;
+        this.eat.fill();
+        this.rigid.fill();
         for (i = 0; i < l; i++) {
             const cell = this.boostingCells[i];
             if (cell.type !== 2 && cell.type !== 3) continue;
