@@ -137,3 +137,21 @@ setTimeout(() => {
     ask();
 }, 1000);
 currentHandle.start();
+
+// --- PUENTE PARA EL DASHBOARD ---
+const net = require('net');
+const SOCKET_PATH = '/tmp/sigserver.sock';
+if (fs.existsSync(SOCKET_PATH)) fs.unlinkSync(SOCKET_PATH);
+
+const bridge = net.createServer((socket) => {
+    socket.on('data', (data) => {
+        const cmd = data.toString().trim();
+        logger.print(`[Dashboard] Ejecutando: ${cmd}`);
+        if (!currentHandle.commands.execute(null, cmd)) {
+            logger.print(`[Dashboard] Comando desconocido: ${cmd}`);
+        }
+    });
+});
+bridge.listen(SOCKET_PATH, () => logger.debug(`Puente de comandos activo en ${SOCKET_PATH}`));
+
+process.on('exit', () => { if (fs.existsSync(SOCKET_PATH)) fs.unlinkSync(SOCKET_PATH); });
