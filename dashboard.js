@@ -13,11 +13,11 @@ const SOCKET_PATH = '/tmp/sigserver.sock';
 const SETTINGS_FILE = './settings.json';
 // ---------------------
 
-console.log(">> Dashboard Extreme v2 iniciando...");
+console.log(">> Dashboard Extreme v2 corrigiendo errores...");
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
-    secret: 'sigmally-secret-ultra-v4',
+    secret: 'sigmally-secret-ultra-vfinal',
     resave: false,
     saveUninitialized: true
 }));
@@ -70,7 +70,8 @@ app.get('/getallsettings', auth, (req, res) => {
 });
 
 app.get('/', auth, (req, res) => {
-    const html = `
+    // Usamos concatenación simple para el HTML para evitar líos con backticks anidados
+    let html = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -232,7 +233,12 @@ app.get('/', auth, (req, res) => {
             function updateSettingsList() {
                 const cat = document.getElementById('cat').value;
                 const sel = document.getElementById('set_name');
-                sel.innerHTML = configMap[cat].map(s => `<option value="${s.n}">${s.d}</option>`).join('');
+                // Evitamos backticks anidados usando comillas simples y concatenación
+                let options = '';
+                configMap[cat].forEach(s => {
+                    options += '<option value="' + s.n + '">' + s.d + '</option>';
+                });
+                sel.innerHTML = options;
                 showCurrentValue();
             }
 
@@ -280,13 +286,14 @@ app.get('/', auth, (req, res) => {
 app.get('/update_setting', auth, (req, res) => {
     const { n, v } = req.query;
     if (!n || !v) return res.sendStatus(400);
-    sendCommand(`setting ${n} ${v}`);
+    sendCommand("setting " + n + " " + v);
     try {
         let settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
         settings[n] = isNaN(v) ? (v === 'true' ? true : v === 'false' ? false : v) : parseFloat(v);
         fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 4));
         res.sendStatus(200);
     } catch (e) {
+        console.error(">> Error guardando JSON:", e.message);
         res.status(500).send(e.message);
     }
 });
@@ -306,10 +313,12 @@ app.get('/getlogs', auth, (req, res) => {
     try {
         const data = JSON.parse(execSync('pm2 jlist').toString());
         const proc = data.find(p => p.name === 'sig-server');
-        if (!proc) return res.send(">> [ERROR] sig-server no encontrado.");
+        if (!proc) return res.send(">> [ERROR] sig-server no encontrado en PM2.");
         
         const logPath = proc.pm2_env.pm_out_log_path;
-        exec(`tail -n 100 "${logPath}"`, (err, stdout) => {
+        if (!fs.existsSync(logPath)) return res.send(">> [ERROR] Archivo de log no encontrado.");
+        
+        exec('tail -n 100 "' + logPath + '"', (err, stdout) => {
             if (err) return res.send(">> [ERROR] tail failed: " + err.message);
             res.send(stdout || ">> Consola vacía.");
         });
@@ -323,4 +332,4 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-app.listen(PORT, () => console.log(`Dashboard activo en puerto ${PORT}`));
+app.listen(PORT, () => console.log('Dashboard Extreme v2.1 activo en puerto ' + PORT));
