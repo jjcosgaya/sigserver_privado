@@ -47,11 +47,11 @@ pnpm install express body-parser
 Oracle Cloud usa `iptables` por defecto. Debes abrir los puertos necesarios en el sistema operativo:
 
 ```bash
-# Abrir puerto 3000 (juego), 4000 (dashboard), 80 (http) y 443 (https)
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 3000 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 4000 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+# Abrir puertos al principio de la lista para asegurar acceso (fundamental en Oracle)
+sudo iptables -I INPUT 1 -p tcp --dport 3000 -j ACCEPT
+sudo iptables -I INPUT 1 -p tcp --dport 4000 -j ACCEPT
+sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
 
 # Guardar los cambios para que persistan tras reiniciar
 sudo netfilter-persistent save
