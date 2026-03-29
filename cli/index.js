@@ -123,7 +123,7 @@ currentHandle.commands.register(
 );
 
 function ask() {
-    if (commandStreamClosing) return;
+    if (commandStreamClosing || commandStream.closed) return;
     commandStream.question("@ ", (input) => {
         setTimeout(ask, 0);
         if (!(input = input.trim())) return;
