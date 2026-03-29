@@ -13,9 +13,11 @@ const SOCKET_PATH = '/tmp/sigserver.sock';
 const SETTINGS_FILE = './settings.json';
 // ---------------------
 
+console.log(">> Dashboard Extreme v2 iniciando...");
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
-    secret: 'sigmally-secret-ultra-v2',
+    secret: 'sigmally-secret-ultra-v4',
     resave: false,
     saveUninitialized: true
 }));
@@ -29,11 +31,14 @@ function getSigServerId() {
 }
 
 function sendCommand(cmd) {
+    console.log(">> Enviando comando al puente:", cmd);
     const client = net.createConnection({ path: SOCKET_PATH }, () => {
         client.write(cmd);
         client.end();
     });
-    client.on('error', (err) => console.error("Error puente:", err.message));
+    client.on('error', (err) => {
+        console.error(">> [ERROR] No se pudo conectar al puente (socket):", err.message);
+    });
 }
 
 const auth = (req, res, next) => {
@@ -57,9 +62,11 @@ app.post('/login', (req, res) => {
 });
 
 app.get('/getallsettings', auth, (req, res) => {
-    if (fs.existsSync(SETTINGS_FILE)) {
-        res.json(JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8')));
-    } else res.json({});
+    try {
+        if (fs.existsSync(SETTINGS_FILE)) {
+            res.json(JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8')));
+        } else res.json({});
+    } catch(e) { res.json({error: e.message}); }
 });
 
 app.get('/', auth, (req, res) => {
@@ -79,9 +86,10 @@ app.get('/', auth, (req, res) => {
             .card { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #2d2d3d; }
             h3 { margin-top: 0; color: var(--accent); font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
             .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-            button { background: var(--accent); color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+            button { background: var(--accent); color: white; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.1s; }
+            button:active { transform: scale(0.95); }
             select, input { background: #0f0f13; color: white; border: 1px solid #333; padding: 12px; border-radius: 6px; outline: none; }
-            .terminal { background: #000; padding: 15px; border-radius: 8px; font-family: monospace; color: #00ff00; height: 300px; overflow-y: auto; font-size: 13px; border: 1px solid #333; }
+            .terminal { background: #000; padding: 15px; border-radius: 8px; font-family: monospace; color: #00ff00; height: 350px; overflow-y: auto; font-size: 13px; border: 1px solid #333; white-space: pre-wrap; }
             .val-badge { background: #333; padding: 2px 8px; border-radius: 4px; color: #f39c12; font-family: monospace; font-weight: bold; font-size: 14px; }
             .cheatsheet { font-size: 12px; color: #aaa; }
             .cheatsheet code { color: #00ff00; }
@@ -91,7 +99,7 @@ app.get('/', auth, (req, res) => {
         <div class="navbar">
             <h2 style="margin:0;">SIGMALLY <span style="color:var(--accent)">EXTREME</span></h2>
             <div style="display:flex; gap:10px;">
-                <button onclick="location.reload()" style="background:#444;">🔄 Refrescar Datos</button>
+                <button onclick="loadData()" style="background:#444;">🔄 Refrescar Datos</button>
                 <a href="/logout"><button style="background:var(--danger)">Cerrar</button></a>
             </div>
         </div>
@@ -131,7 +139,7 @@ app.get('/', auth, (req, res) => {
                     <div style="background:#000; padding:15px; border-radius:8px; display:flex; align-items:center; justify-content:space-between;">
                         <div>
                             <span style="font-size:12px; color:#888;">Valor Actual:</span><br>
-                            <span id="curr_val" class="val-badge">Cargando...</span>
+                            <span id="curr_val" class="val-badge">...</span>
                         </div>
                         <div style="display:flex; gap:10px; width:60%;">
                             <input type="text" id="set_val" placeholder="Nuevo valor" style="flex:1;">
@@ -143,14 +151,14 @@ app.get('/', auth, (req, res) => {
                 <div class="card">
                     <h3>💻 Consola Manual</h3>
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="manual_cmd" placeholder="Comando libre (ej: mass 1 10000)" style="flex:1;">
+                        <input type="text" id="manual_cmd" placeholder="Comando libre (ej: mass 1 10000)" style="flex:1; font-family:monospace;">
                         <button onclick="run_manual()" style="width:100px; background:#444;">ENVIAR</button>
                     </div>
                 </div>
 
                 <div class="card">
                     <h3>📺 Consola en Vivo</h3>
-                    <div id="logs" class="terminal">Iniciando terminal...</div>
+                    <div id="logs" class="terminal">Conectando con el servidor...</div>
                 </div>
             </div>
 
@@ -160,8 +168,8 @@ app.get('/', auth, (req, res) => {
                     <p><b>Jugadores:</b><br>
                     <code>mass ID MASA</code><br>
                     <code>kill ID</code><br>
-                    <code>merge ID</code> (Juntar)<br>
-                    <code>explode ID</code> (Explotar)</p>
+                    <code>merge ID</code><br>
+                    <code>explode ID</code></p>
                     <p><b>Bots:</b><br>
                     <code>addbot 0 CANT</code><br>
                     <code>addminion ID CANT</code></p>
@@ -169,7 +177,7 @@ app.get('/', auth, (req, res) => {
                     <code>forbid ID_o_IP</code><br>
                     <code>pardon IP</code></p>
                     <hr style="border:0; border-top:1px solid #333;">
-                    <p style="color:var(--accent)"><b>Tip:</b> Si cambias el tamaño del mapa, usa <code>restart</code> para aplicarlo.</p>
+                    <p style="color:var(--accent)"><b>Tip:</b> Los cambios se aplican al instante y se guardan en el archivo.</p>
                 </div>
             </div>
         </div>
@@ -214,44 +222,52 @@ app.get('/', auth, (req, res) => {
             };
 
             async function loadData() {
-                const r = await fetch('/getallsettings');
-                serverSettings = await r.json();
-                updateSettingsList();
+                try {
+                    const r = await fetch('/getallsettings');
+                    serverSettings = await r.json();
+                    updateSettingsList();
+                } catch(e) { console.error("Error cargando settings:", e); }
             }
 
             function updateSettingsList() {
                 const cat = document.getElementById('cat').value;
                 const sel = document.getElementById('set_name');
-                sel.innerHTML = configMap[cat].map(s => \`<option value="\${s.n}">\${s.d}</option>\`).join('');
+                sel.innerHTML = configMap[cat].map(s => `<option value="${s.n}">${s.d}</option>`).join('');
                 showCurrentValue();
             }
 
             function showCurrentValue() {
                 const name = document.getElementById('set_name').value;
-                document.getElementById('curr_val').innerText = serverSettings[name] ?? 'Desconocido';
+                const val = serverSettings[name];
+                document.getElementById('curr_val').innerText = (val === undefined) ? '?' : val;
             }
 
             function run(c) { fetch('/cmd?c='+encodeURIComponent(c)); }
+            
             function run_manual() { 
                 const i = document.getElementById('manual_cmd');
                 if(i.value) { run(i.value); i.value = ''; }
             }
+
             async function set() {
                 const n = document.getElementById('set_name').value;
                 const v = document.getElementById('set_val').value;
                 if(!v) return;
                 await fetch('/update_setting?n='+n+'&v='+encodeURIComponent(v));
                 document.getElementById('set_val').value = '';
-                loadData(); // Recargar valores
+                setTimeout(loadData, 500); 
             }
 
             loadData();
+
             setInterval(() => {
                 fetch('/getlogs').then(r => r.text()).then(t => {
                     const l = document.getElementById('logs');
-                    const isAtBottom = l.scrollHeight - l.clientHeight <= l.scrollTop + 50;
+                    const wasAtBottom = l.scrollHeight - l.clientHeight <= l.scrollTop + 50;
                     l.innerText = t;
-                    if (isAtBottom) l.scrollTop = l.scrollHeight;
+                    if (wasAtBottom) l.scrollTop = l.scrollHeight;
+                }).catch(e => {
+                    document.getElementById('logs').innerText = ">> [ERROR] No se puede conectar con el Dashboard API.";
                 });
             }, 2000);
         </script>
@@ -264,11 +280,7 @@ app.get('/', auth, (req, res) => {
 app.get('/update_setting', auth, (req, res) => {
     const { n, v } = req.query;
     if (!n || !v) return res.sendStatus(400);
-
-    // 1. Aplicar al servidor en vivo
     sendCommand(`setting ${n} ${v}`);
-
-    // 2. Guardar en el archivo JSON permanentemente
     try {
         let settings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
         settings[n] = isNaN(v) ? (v === 'true' ? true : v === 'false' ? false : v) : parseFloat(v);
@@ -282,9 +294,7 @@ app.get('/update_setting', auth, (req, res) => {
 app.get('/cmd', auth, (req, res) => {
     const cmd = req.query.c;
     if (!cmd) return res.sendStatus(400);
-
     if (cmd === 'restart') {
-        // Reinicio total vía PM2 para mayor fiabilidad
         exec('pm2 restart sig-server');
     } else {
         sendCommand(cmd);
@@ -293,13 +303,19 @@ app.get('/cmd', auth, (req, res) => {
 });
 
 app.get('/getlogs', auth, (req, res) => {
-    const id = getSigServerId();
-    if (id === null) return res.send(">> [ERROR] sig-server no encontrado en PM2.");
-    // Usamos un comando compatible con la mayoría de versiones de PM2
-    exec(`pm2 logs \${id} --lines 50 --raw`, (err, stdout) => {
-        if (err) return res.send(">> [ERROR] Error leyendo logs: " + err.message);
-        res.send(stdout || ">> Consola vacía.");
-    });
+    try {
+        const data = JSON.parse(execSync('pm2 jlist').toString());
+        const proc = data.find(p => p.name === 'sig-server');
+        if (!proc) return res.send(">> [ERROR] sig-server no encontrado.");
+        
+        const logPath = proc.pm2_env.pm_out_log_path;
+        exec(`tail -n 100 "${logPath}"`, (err, stdout) => {
+            if (err) return res.send(">> [ERROR] tail failed: " + err.message);
+            res.send(stdout || ">> Consola vacía.");
+        });
+    } catch (e) {
+        res.send(">> [ERROR] Error leyendo logs: " + e.message);
+    }
 });
 
 app.get('/logout', (req, res) => {
@@ -307,4 +323,4 @@ app.get('/logout', (req, res) => {
     res.redirect('/');
 });
 
-app.listen(PORT, () => console.log(`Extreme Dashboard activo en puerto ${PORT}`));
+app.listen(PORT, () => console.log(`Dashboard activo en puerto ${PORT}`));
