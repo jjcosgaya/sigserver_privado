@@ -17,6 +17,8 @@
         "url": "https://github.com/Luka967/OgarII/issues"
     },
     "dependencies": {
+        "body-parser": "^2.2.2",
+        "express": "^5.2.1",
         "ws": "^8.18.1"
     },
     "devDependencies": {
