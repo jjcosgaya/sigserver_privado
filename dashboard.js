@@ -280,14 +280,26 @@ app.get('/update_setting', auth, (req, res) => {
 });
 
 app.get('/cmd', auth, (req, res) => {
-    if (req.query.c) sendCommand(req.query.c);
+    const cmd = req.query.c;
+    if (!cmd) return res.sendStatus(400);
+
+    if (cmd === 'restart') {
+        // Reinicio total vía PM2 para mayor fiabilidad
+        exec('pm2 restart sig-server');
+    } else {
+        sendCommand(cmd);
+    }
     res.sendStatus(200);
 });
 
 app.get('/getlogs', auth, (req, res) => {
     const id = getSigServerId();
-    if (!id) return res.send(">> [ERROR] sig-server no encontrado.");
-    exec(`pm2 logs ${id} --raw --lines 100 --no-append`, (err, stdout) => res.send(stdout));
+    if (id === null) return res.send(">> [ERROR] sig-server no encontrado en PM2.");
+    // Usamos un comando más sencillo para los logs
+    exec(`pm2 logs \${id} --lines 50 --no-append`, (err, stdout) => {
+        if (err) return res.send(">> [ERROR] Error leyendo logs: " + err.message);
+        res.send(stdout || ">> Consola vacía.");
+    });
 });
 
 app.get('/logout', (req, res) => {

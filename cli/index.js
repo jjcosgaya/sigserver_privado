@@ -141,17 +141,45 @@ currentHandle.start();
 // --- PUENTE PARA EL DASHBOARD ---
 const net = require('net');
 const SOCKET_PATH = '/tmp/sigserver.sock';
-if (fs.existsSync(SOCKET_PATH)) fs.unlinkSync(SOCKET_PATH);
 
-const bridge = net.createServer((socket) => {
-    socket.on('data', (data) => {
-        const cmd = data.toString().trim();
-        logger.print(`[Dashboard] Ejecutando: ${cmd}`);
-        if (!currentHandle.commands.execute(null, cmd)) {
-            logger.print(`[Dashboard] Comando desconocido: ${cmd}`);
-        }
+function setupBridge() {
+    if (fs.existsSync(SOCKET_PATH)) fs.unlinkSync(SOCKET_PATH);
+
+    const bridge = net.createServer((socket) => {
+        socket.on('data', (data) => {
+            const cmd = data.toString().trim();
+            logger.print(`[Dashboard Bridge] Recibido: "${cmd}"`);
+            
+            // Especial: Si el comando es restart, lo hacemos con un pequeño delay
+            if (cmd === 'restart') {
+                logger.print("[Dashboard Bridge] Reiniciando servidor de forma segura...");
+                currentHandle.stop();
+                setTimeout(() => {
+                    currentHandle.start();
+                    logger.print("[Dashboard Bridge] Servidor reiniciado.");
+                }, 1000);
+                return;
+            }
+
+            try {
+                if (!currentHandle.commands.execute(null, cmd)) {
+                    logger.print(`[Dashboard Bridge] Comando desconocido: ${cmd}`);
+                }
+            } catch (e) {
+                logger.print(`[Dashboard Bridge] Error ejecutando "${cmd}": ${e.message}`);
+            }
+        });
+        socket.on('error', (err) => logger.debug(`[Dashboard Bridge] Error en socket: ${err.message}`));
     });
-});
-bridge.listen(SOCKET_PATH, () => logger.debug(`Puente de comandos activo en ${SOCKET_PATH}`));
+
+    bridge.on('error', (err) => {
+        logger.error(`[Dashboard Bridge] Error en servidor bridge: ${err.message}`);
+        setTimeout(setupBridge, 5000); // Reintentar si falla
+    });
+
+    bridge.listen(SOCKET_PATH, () => logger.debug(`Puente de comandos activo en ${SOCKET_PATH}`));
+}
+
+setupBridge();
 
 process.on('exit', () => { if (fs.existsSync(SOCKET_PATH)) fs.unlinkSync(SOCKET_PATH); });
