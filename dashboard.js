@@ -295,8 +295,8 @@ app.get('/cmd', auth, (req, res) => {
 app.get('/getlogs', auth, (req, res) => {
     const id = getSigServerId();
     if (id === null) return res.send(">> [ERROR] sig-server no encontrado en PM2.");
-    // Usamos un comando más sencillo para los logs
-    exec(`pm2 logs \${id} --lines 50 --no-append`, (err, stdout) => {
+    // Usamos un comando compatible con la mayoría de versiones de PM2
+    exec(`pm2 logs \${id} --lines 50 --raw`, (err, stdout) => {
         if (err) return res.send(">> [ERROR] Error leyendo logs: " + err.message);
         res.send(stdout || ">> Consola vacía.");
     });
