@@ -210,7 +210,7 @@ app.get('/', auth, (req, res) => {
             function updateSettingsList() {
                 const cat = document.getElementById('cat').value;
                 const sel = document.getElementById('set_name');
-                sel.innerHTML = settings[cat].map(s => \`<option value="${s.n}">${s.d}</option>\`).join('');
+                sel.innerHTML = settings[cat].map(s => \`<option value="\${s.n}">\${s.d}</option>\`).join('');
             }
 
             function run(c) { fetch('/cmd?c='+encodeURIComponent(c)); }
