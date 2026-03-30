@@ -88,6 +88,21 @@ module.exports = {
         return unmapped ? unmapped[1] : a;
     },
     /**
+     * Extrae la IP real del cliente desde headers de proxy (Cloudflare, nginx, etc.)
+     * @param {import("http").IncomingMessage} req
+     * @returns {string | null}
+     */
+    getForwardedIP(req) {
+        if (!req || !req.headers) return null;
+        const cfIp = req.headers['cf-connecting-ip'];
+        if (cfIp) return cfIp.trim();
+        const xff = req.headers['x-forwarded-for'];
+        if (xff) return xff.split(',')[0].trim();
+        const realIp = req.headers['x-real-ip'];
+        if (realIp) return realIp.trim();
+        return null;
+    },
+    /**
      * @param {number} x
      */
     clampBits(x) {

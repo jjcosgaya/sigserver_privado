@@ -2,7 +2,8 @@ const { WebSocket, WebSocketServer } = require("ws");
 
 const Connection = require("./Connection");
 const ChatChannel = require("./ChatChannel");
-const { filterIPAddress } = require("../primitives/Misc");
+const Misc = require("../primitives/Misc");
+const { filterIPAddress } = Misc;
 
 class Listener {
     /**
@@ -48,7 +49,8 @@ class Listener {
      * @param {*} response
      */
     verifyClient(info, response) {
-        const address = filterIPAddress(info.req.socket.remoteAddress);
+        const forwardedIp = Misc.getForwardedIP(info.req);
+        const address = filterIPAddress(forwardedIp || info.req.socket.remoteAddress);
         this.logger.onAccess(`REQUEST FROM ${address}, ${info.secure ? "" : "not "}secure, Origin: ${info.origin}`);
         if (this.connections.length > this.settings.listenerMaxConnections) {
             this.logger.debug("listenerMaxConnections reached, dropping new connections");
@@ -92,9 +94,10 @@ class Listener {
 
     /**
      * @param {WebSocket} webSocket
+     * @param {import("http").IncomingMessage} request
      */
-    onConnection(webSocket) {
-        const newConnection = new Connection(this, webSocket);
+    onConnection(webSocket, request) {
+        const newConnection = new Connection(this, webSocket, request);
         this.logger.onAccess(`CONNECTION FROM ${newConnection.remoteAddress}`);
         this.connectionsByIP[newConnection.remoteAddress] =
             this.connectionsByIP[newConnection.remoteAddress] + 1 || 1;

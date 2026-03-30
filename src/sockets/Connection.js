@@ -1,15 +1,18 @@
 const Router = require("./Router");
 const Reader = require("../primitives/Reader");
-const { filterIPAddress } = require("../primitives/Misc");
+const Misc = require("../primitives/Misc");
+const { filterIPAddress } = Misc;
 
 class Connection extends Router {
     /**
      * @param {Listener} listener
      * @param {WebSocket} webSocket
+     * @param {import("http").IncomingMessage} [request]
      */
-    constructor(listener, webSocket) {
+    constructor(listener, webSocket, request) {
         super(listener);
-        this.remoteAddress = filterIPAddress(webSocket._socket.remoteAddress);
+        const forwardedIp = Misc.getForwardedIP(request);
+        this.remoteAddress = filterIPAddress(forwardedIp || webSocket._socket.remoteAddress);
         this.webSocket = webSocket;
         this.connectTime = Date.now();
         this.lastActivityTime = Date.now();
