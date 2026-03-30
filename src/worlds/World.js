@@ -226,11 +226,19 @@ class World {
         const ip = player.router.remoteAddress;
         if (!ip) return null;
 
-        // Intentar encontrar un hueco seguro cerca de cualquier célula del mismo dueño (IP)
-        const sameIpPlayers = this.players.filter(p => p !== player && p.router.remoteAddress === ip && p.ownedCells.length > 0);
+        const spawningName = player.router.spawningAttributes ? player.router.spawningAttributes.name : null;
+
+        // 1. Buscar jugadores con misma IP
+        let sameIpPlayers = this.players.filter(p => p !== player && p.router.remoteAddress === ip && p.ownedCells.length > 0);
         if (sameIpPlayers.length === 0) return null;
 
-        // 1. Intentar encontrar un hueco SEGURO (sin colisiones) cerca de CUALQUIER célula propia
+        // 2. Priorizar los que tengan el mismo nombre (multibox real)
+        if (spawningName) {
+            const sameNamePlayers = sameIpPlayers.filter(p => p.leaderboardName === spawningName);
+            if (sameNamePlayers.length > 0) sameIpPlayers = sameNamePlayers;
+        }
+
+        // 3. Intentar encontrar un hueco SEGURO cerca de CUALQUIER célula de los jugadores filtrados
         let tries = this.settings.worldSafeSpawnTries;
         while (--tries >= 0) {
             const other = sameIpPlayers[~~(Math.random() * sameIpPlayers.length)];
@@ -245,16 +253,16 @@ class World {
                 return pos;
         }
 
-        // 2. Si no hay hueco seguro, forzar spawn cerca de la célula más grande (aunque haya colisión parcial con comida/otros)
-        // Esto evita que aparezca en la otra punta del mapa.
-        let bestOther = sameIpPlayers[0];
-        let bestCell = bestOther.ownedCells[0];
+        // 4. Si no hay hueco seguro, forzar spawn cerca de la célula más grande de los jugadores filtrados
+        let bestCell = null;
         for (const p of sameIpPlayers) {
             for (const c of p.ownedCells) {
-                if (c.size > bestCell.size) bestCell = c;
+                if (!bestCell || c.size > bestCell.size) bestCell = c;
             }
         }
         
+        if (!bestCell) return null;
+
         const angle = Math.random() * Math.PI * 2;
         const dist = bestCell.size + cellSize + 60;
         return {
