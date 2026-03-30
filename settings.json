@@ -20,6 +20,7 @@
     "worldFinderMaxItems": 16,
     "worldSafeSpawnTries": 64,
     "worldSafeSpawnFromEjectedChance": 0,
+    "worldMultiboxSpawnNear": true,
     "worldPlayerDisposeDelay": 1500,
     "worldEatMult": 1.140175425099138,
     "worldEatOverlapDiv": 3,

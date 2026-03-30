@@ -78,7 +78,7 @@ class Teams extends Gamemode {
         const size = player.router.type === "minion" ?
             this.handle.settings.minionSpawnSize :
             this.handle.settings.playerSpawnSize;
-        const pos = player.world.getSafeSpawnPos(size);
+        const pos = player.world.getSafeSpawnPos(size, player);
         const color = player.router.separateInTeams ? getTeamColor(player.team) : Misc.randomColor();
         const name = player.router.spawningAttributes.name || player.leaderboardName || '';
         player.cellName = player.chatName = player.leaderboardName = name;

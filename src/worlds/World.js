@@ -201,9 +201,14 @@ class World {
     }
     /**
      * @param {number} cellSize
+     * @param {Player} [player]
      * @returns {Point}
      */
-    getSafeSpawnPos(cellSize) {
+    getSafeSpawnPos(cellSize, player) {
+        if (this.settings.worldMultiboxSpawnNear && player) {
+            const multiboxPos = this.getMultiboxPos(player, cellSize);
+            if (multiboxPos) return multiboxPos;
+        }
         let tries = this.settings.worldSafeSpawnTries;
         while (--tries >= 0) {
             const pos = this.getRandomPos(cellSize);
@@ -213,10 +218,38 @@ class World {
         return this.getRandomPos(cellSize);
     }
     /**
+     * @param {Player} player
      * @param {number} cellSize
+     * @returns {Point | null}
+     */
+    getMultiboxPos(player, cellSize) {
+        const ip = player.router.remoteAddress;
+        if (!ip) return null;
+        for (let i = 0, l = this.players.length; i < l; i++) {
+            const other = this.players[i];
+            if (other === player || other.router.remoteAddress !== ip || other.ownedCells.length === 0)
+                continue;
+            const cell = other.ownedCells[~~(Math.random() * other.ownedCells.length)];
+            let tries = this.settings.worldSafeSpawnTries;
+            while (--tries >= 0) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = cell.size + cellSize + 100 + Math.random() * 200;
+                const pos = {
+                    x: Math.max(this.border.x - this.border.w + cellSize, Math.min(cell.x + Math.cos(angle) * dist, this.border.x + this.border.w - cellSize)),
+                    y: Math.max(this.border.y - this.border.h + cellSize, Math.min(cell.y + Math.sin(angle) * dist, this.border.y + this.border.h - cellSize))
+                };
+                if (this.isSafeSpawnPos({ x: pos.x, y: pos.y, w: cellSize, h: cellSize }))
+                    return pos;
+            }
+        }
+        return null;
+    }
+    /**
+     * @param {number} cellSize
+     * @param {Player} [player]
      * @returns {{ color: number, pos: Point }}
      */
-    getPlayerSpawn(cellSize) {
+    getPlayerSpawn(cellSize, player) {
         if (this.settings.worldSafeSpawnFromEjectedChance > Math.random() && this.ejectedCells.length > 0) {
             let tries = this.settings.worldSafeSpawnTries;
             while (--tries >= 0) {
@@ -227,7 +260,7 @@ class World {
                 }
             }
         }
-        return { color: null, pos: this.getSafeSpawnPos(cellSize) };
+        return { color: null, pos: this.getSafeSpawnPos(cellSize, player) };
     }
 
     /**

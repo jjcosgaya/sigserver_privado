@@ -26,6 +26,7 @@ const value = Object.seal({
     worldFinderMaxItems: 16,
     worldSafeSpawnTries: 64,
     worldSafeSpawnFromEjectedChance: 0, // OG: 0.8
+    worldMultiboxSpawnNear: true,
     worldPlayerDisposeDelay: 25 * 60,
 
     worldEatMult: 1.140175425099138,

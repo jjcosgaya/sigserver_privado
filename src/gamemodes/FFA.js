@@ -35,7 +35,7 @@ class FFA extends Gamemode {
         const size = player.router.type === "minion" ?
              this.handle.settings.minionSpawnSize :
              this.handle.settings.playerSpawnSize;
-        const spawnInfo = player.world.getPlayerSpawn(size);
+        const spawnInfo = player.world.getPlayerSpawn(size, player);
         const color = spawnInfo.color || Misc.randomColor();
         const name = player.router.spawningAttributes.name || player.leaderboardName || '';
         player.cellName = player.chatName = player.leaderboardName = name;
