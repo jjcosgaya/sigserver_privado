@@ -116,7 +116,7 @@
     "playerAllowSkinInName": true,
     "playerMinSize": 64,
     "playerSpawnSize": 750,
-    "playerMaxSize": 5000,
+    "playerMaxSize": 2500,
     "playerMinSplitSize": 128,
     "playerMinEjectSize": 100,
     "playerSplitCap": 255,
