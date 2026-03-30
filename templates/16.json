@@ -124,7 +124,7 @@
     "playerMaxCells": 16,
     "playerMoveMult": 5,
     "playerSplitSizeDiv": 1.414213562373095,
-    "playerSplitDistance": 60,
+    "playerSplitDistance": 100,
     "playerSplitBoost": 1000,
     "playerNoCollideDelay": 13,
     "playerNoMergeDelay": 15,
