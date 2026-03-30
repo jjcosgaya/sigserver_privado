@@ -233,7 +233,7 @@ class World {
             let tries = this.settings.worldSafeSpawnTries;
             while (--tries >= 0) {
                 const angle = Math.random() * Math.PI * 2;
-                const dist = cell.size + cellSize + 100 + Math.random() * 200;
+                const dist = cell.size + cellSize + 60 + Math.random() * 10;
                 const pos = {
                     x: Math.max(this.border.x - this.border.w + cellSize, Math.min(cell.x + Math.cos(angle) * dist, this.border.x + this.border.w - cellSize)),
                     y: Math.max(this.border.y - this.border.h + cellSize, Math.min(cell.y + Math.sin(angle) * dist, this.border.y + this.border.h - cellSize))
