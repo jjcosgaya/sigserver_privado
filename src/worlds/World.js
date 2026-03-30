@@ -224,24 +224,40 @@ class World {
      */
     getMultiboxPos(player, cellSize) {
         const ip = player.router.remoteAddress;
-        if (!ip) return null;
-
         const spawningName = player.router.spawningAttributes ? player.router.spawningAttributes.name : null;
+        const mouseX = player.router.mouseX;
+        const mouseY = player.router.mouseY;
 
-        // 1. Buscar jugadores con misma IP
-        let sameIpPlayers = this.players.filter(p => p !== player && p.router.remoteAddress === ip && p.ownedCells.length > 0);
-        if (sameIpPlayers.length === 0) return null;
+        // 1. Filtrar posibles candidatos (Misma IP O Mismo Nombre O Misma posición de ratón)
+        let candidates = this.players.filter(p => {
+            if (p === player || p.ownedCells.length === 0) return false;
+            
+            // Misma IP (siempre que no sea null/localhost genérico)
+            if (ip && ip !== '127.0.0.1' && p.router.remoteAddress === ip) return true;
+            
+            // Mismo Nombre exacto
+            if (spawningName && p.leaderboardName === spawningName) return true;
+            
+            // Misma posición de ratón (muy probable en multibox)
+            if (Math.abs(p.router.mouseX - mouseX) < 5 && Math.abs(p.router.mouseY - mouseY) < 5) return true;
 
-        // 2. Priorizar los que tengan el mismo nombre (multibox real)
-        if (spawningName) {
-            const sameNamePlayers = sameIpPlayers.filter(p => p.leaderboardName === spawningName);
-            if (sameNamePlayers.length > 0) sameIpPlayers = sameNamePlayers;
-        }
+            return false;
+        });
 
-        // 3. Intentar encontrar un hueco SEGURO cerca de CUALQUIER célula de los jugadores filtrados
+        if (candidates.length === 0) return null;
+
+        // 2. Priorizar los que coincidan en NOMBRE y MOUSE (Multibox casi seguro)
+        const bestCandidates = candidates.filter(p => 
+            p.leaderboardName === spawningName && 
+            Math.abs(p.router.mouseX - mouseX) < 10 && 
+            Math.abs(p.router.mouseY - mouseY) < 10
+        );
+        if (bestCandidates.length > 0) candidates = bestCandidates;
+
+        // 3. Intentar encontrar un hueco SEGURO cerca de las células de los candidatos
         let tries = this.settings.worldSafeSpawnTries;
         while (--tries >= 0) {
-            const other = sameIpPlayers[~~(Math.random() * sameIpPlayers.length)];
+            const other = candidates[~~(Math.random() * candidates.length)];
             const cell = other.ownedCells[~~(Math.random() * other.ownedCells.length)];
             const angle = Math.random() * Math.PI * 2;
             const dist = cell.size + cellSize + 60 + Math.random() * 10;
@@ -253,9 +269,9 @@ class World {
                 return pos;
         }
 
-        // 4. Si no hay hueco seguro, forzar spawn cerca de la célula más grande de los jugadores filtrados
+        // 4. Si no hay hueco seguro, forzar spawn cerca de la célula más grande de los mejores candidatos
         let bestCell = null;
-        for (const p of sameIpPlayers) {
+        for (const p of candidates) {
             for (const c of p.ownedCells) {
                 if (!bestCell || c.size > bestCell.size) bestCell = c;
             }
