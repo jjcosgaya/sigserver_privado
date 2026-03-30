@@ -225,24 +225,42 @@ class World {
     getMultiboxPos(player, cellSize) {
         const ip = player.router.remoteAddress;
         if (!ip) return null;
-        for (let i = 0, l = this.players.length; i < l; i++) {
-            const other = this.players[i];
-            if (other === player || other.router.remoteAddress !== ip || other.ownedCells.length === 0)
-                continue;
+
+        // Intentar encontrar un hueco seguro cerca de cualquier célula del mismo dueño (IP)
+        const sameIpPlayers = this.players.filter(p => p !== player && p.router.remoteAddress === ip && p.ownedCells.length > 0);
+        if (sameIpPlayers.length === 0) return null;
+
+        // 1. Intentar encontrar un hueco SEGURO (sin colisiones) cerca de CUALQUIER célula propia
+        let tries = this.settings.worldSafeSpawnTries;
+        while (--tries >= 0) {
+            const other = sameIpPlayers[~~(Math.random() * sameIpPlayers.length)];
             const cell = other.ownedCells[~~(Math.random() * other.ownedCells.length)];
-            let tries = this.settings.worldSafeSpawnTries;
-            while (--tries >= 0) {
-                const angle = Math.random() * Math.PI * 2;
-                const dist = cell.size + cellSize + 60 + Math.random() * 10;
-                const pos = {
-                    x: Math.max(this.border.x - this.border.w + cellSize, Math.min(cell.x + Math.cos(angle) * dist, this.border.x + this.border.w - cellSize)),
-                    y: Math.max(this.border.y - this.border.h + cellSize, Math.min(cell.y + Math.sin(angle) * dist, this.border.y + this.border.h - cellSize))
-                };
-                if (this.isSafeSpawnPos({ x: pos.x, y: pos.y, w: cellSize, h: cellSize }))
-                    return pos;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = cell.size + cellSize + 60 + Math.random() * 10;
+            const pos = {
+                x: Math.max(this.border.x - this.border.w + cellSize, Math.min(cell.x + Math.cos(angle) * dist, this.border.x + this.border.w - cellSize)),
+                y: Math.max(this.border.y - this.border.h + cellSize, Math.min(cell.y + Math.sin(angle) * dist, this.border.y + this.border.h - cellSize))
+            };
+            if (this.isSafeSpawnPos({ x: pos.x, y: pos.y, w: cellSize, h: cellSize }))
+                return pos;
+        }
+
+        // 2. Si no hay hueco seguro, forzar spawn cerca de la célula más grande (aunque haya colisión parcial con comida/otros)
+        // Esto evita que aparezca en la otra punta del mapa.
+        let bestOther = sameIpPlayers[0];
+        let bestCell = bestOther.ownedCells[0];
+        for (const p of sameIpPlayers) {
+            for (const c of p.ownedCells) {
+                if (c.size > bestCell.size) bestCell = c;
             }
         }
-        return null;
+        
+        const angle = Math.random() * Math.PI * 2;
+        const dist = bestCell.size + cellSize + 60;
+        return {
+            x: Math.max(this.border.x - this.border.w + cellSize, Math.min(bestCell.x + Math.cos(angle) * dist, this.border.x + this.border.w - cellSize)),
+            y: Math.max(this.border.y - this.border.h + cellSize, Math.min(bestCell.y + Math.sin(angle) * dist, this.border.y + this.border.h - cellSize))
+        };
     }
     /**
      * @param {number} cellSize
