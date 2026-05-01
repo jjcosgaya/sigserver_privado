@@ -7,7 +7,7 @@ const net = require('net');
 
 const app = express();
 const PORT = 5000;
-const PASSWORD = "admin"; // Puedes cambiarla aquí
+const PASSWORD = process.env.CONSOLE_PASSWORD || "admin"; // Puedes cambiarla aquí
 const SOCKET_PATH = '/tmp/sigserver.sock';
 const SETTINGS_FILE = path.join(__dirname, '../settings.json');
 const LOG_FILE = path.join(__dirname, '../logs/latest.log');
