@@ -178,8 +178,79 @@
         }
         .btn-load { background: var(--accent); color: white; }
         .btn-del { background: #444; color: white; }
+        .btn-mass { background: #e67e22; color: white; }
+
+        .mass-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #0a0a0f;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            border: 1px solid var(--border);
+        }
+        .mass-row .player-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            min-width: 0;
+        }
+        .mass-row .player-name {
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .mass-row .player-meta {
+            display: flex;
+            gap: 12px;
+        }
+        .mass-row .player-id {
+            color: #666;
+            font-size: 11px;
+        }
+        .mass-row .player-score {
+            color: #888;
+            font-size: 11px;
+        }
+        .mass-row .player-input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .mass-row input {
+            width: 120px;
+            padding: 6px 8px;
+            background: #151520;
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 4px;
+            text-align: right;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .mass-row button {
+            margin-left: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+        }
+        .mass-list-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
 
         #modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+        #mass-modal {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -243,7 +314,10 @@
         <div class="terminal-section">
             <h2>
                 <span>Consola del Servidor</span>
-                <span style="font-size: 10px; color: #555;">Logs en tiempo real</span>
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn-mass" style="padding: 3px 8px; font-size: 10px;" onclick="showMassModal()">GESTIONAR MASAS</button>
+                    <span style="font-size: 10px; color: #555;">Logs en tiempo real</span>
+                </span>
             </h2>
             <div class="terminal-wrapper">
                 <div id="terminal">Conectando con logs...</div>
@@ -265,6 +339,22 @@
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
                 <button style="background: #444; color: white;" onclick="closeModal()">CANCELAR</button>
                 <button class="btn-apply" onclick="saveTemplate()">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Gestionar Masas -->
+    <div id="mass-modal" style="display: none;">
+        <div class="modal-content" style="width: 500px;">
+            <h2 style="color: white;">Gestionar Masas de Jugadores</h2>
+            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                <button class="btn-refresh" onclick="loadPlayersForMass()" style="flex: 1;">REFRESCAR JUGADORES</button>
+            </div>
+            <div class="mass-list-container" id="mass-list">
+                <p style="color: #666; font-size: 13px;">Pulsa "Refrescar Jugadores" para cargar la lista...</p>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button style="background: #444; color: white;" onclick="closeMassModal()">CERRAR</button>
             </div>
         </div>
     </div>
@@ -320,10 +410,30 @@
 
         // Ejecutar comandos manuales
         const cmdInput = document.getElementById('command-input');
-        cmdInput.addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter' && cmdInput.value.trim()) {
+        let commandHistory = [];
+        let historyIndex = -1;
+
+        cmdInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    cmdInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    cmdInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
+                } else {
+                    historyIndex = -1;
+                    cmdInput.value = '';
+                }
+            } else if (e.key === 'Enter' && cmdInput.value.trim()) {
                 const command = cmdInput.value.trim();
                 cmdInput.value = '';
+                commandHistory.push(command);
+                historyIndex = -1;
                 
                 try {
                     await fetch('/api/command', {
@@ -331,7 +441,6 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ command })
                     });
-                    // Los resultados aparecerán en los logs automáticamente
                 } catch (err) {
                     console.error("Error enviando comando:", err);
                 }
@@ -395,6 +504,98 @@
                 term.innerText = t;
                 if (wasAtBottom) term.scrollTop = term.scrollHeight;
             }).catch(e => {});
+        }
+
+        function showMassModal() {
+            document.getElementById('mass-modal').style.display = 'flex';
+            loadPlayersForMass();
+        }
+
+        function closeMassModal() {
+            document.getElementById('mass-modal').style.display = 'none';
+        }
+
+        function getDynamicStep(value) {
+            if (value >= 500000) return 100000;
+            if (value >= 100000) return 25000;
+            if (value >= 50000) return 10000;
+            if (value >= 10000) return 5000;
+            if (value >= 5000) return 1000;
+            if (value >= 1000) return 500;
+            if (value >= 500) return 100;
+            return 50;
+        }
+
+        async function loadPlayersForMass() {
+            const list = document.getElementById('mass-list');
+            try {
+                list.innerHTML = '<p style="color: #666; font-size: 13px;">Cargando jugadores...</p>';
+                const res = await fetch('/api/players', { method: 'POST' });
+                const players = await res.json();
+                if (players.length === 0) {
+                    list.innerHTML = '<p style="color: #666; font-size: 13px;">No se encontraron jugadores. Asegúrate de que el servidor está corriendo.</p>';
+                    return;
+                }
+                list.innerHTML = players.map(p => `
+                    <div class="mass-row">
+                        <div class="player-info">
+                            <span class="player-name">${p.name}</span>
+                            <div class="player-meta">
+                                <span class="player-id">ID: ${p.id}</span>
+                                <span class="player-score">Score: ${p.score}</span>
+                            </div>
+                        </div>
+                        <div class="player-input-group">
+                            <input type="number" id="mass-input-${p.id}" placeholder="Masa" min="0" step="100">
+                            <button class="btn-apply" onclick="setPlayerMass(${p.id})">APLICAR</button>
+                        </div>
+                    </div>
+                `).join('');
+                players.forEach(p => {
+                    const input = document.getElementById(`mass-input-${p.id}`);
+                    input.addEventListener('wheel', (e) => {
+                        e.preventDefault();
+                        const current = parseFloat(input.value) || 0;
+                        const step = getDynamicStep(current);
+                        input.value = Math.max(0, Math.round(e.deltaY < 0 ? current + step : current - step));
+                        input.step = step;
+                    });
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            const current = parseFloat(input.value) || 0;
+                            let step = getDynamicStep(current);
+                            if (e.shiftKey) step *= 10;
+                            input.value = Math.max(0, Math.round(e.key === 'ArrowUp' ? current + step : current - step));
+                            input.step = step;
+                        }
+                    });
+                    input.addEventListener('input', () => {
+                        const current = parseFloat(input.value) || 0;
+                        input.step = getDynamicStep(current);
+                    });
+                });
+            } catch (err) {
+                list.innerHTML = '<p style="color: #dc3545; font-size: 13px;">Error al cargar jugadores.</p>';
+            }
+        }
+
+        async function setPlayerMass(playerId) {
+            const input = document.getElementById(`mass-input-${playerId}`);
+            const mass = input.value.trim();
+            if (!mass || isNaN(mass)) return;
+            try {
+                await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: `mass ${playerId} ${mass}` })
+                });
+                input.style.borderColor = '#28a745';
+                setTimeout(() => input.style.borderColor = '', 1000);
+            } catch (err) {
+                input.style.borderColor = '#dc3545';
+                setTimeout(() => input.style.borderColor = '', 1000);
+            }
         }
 
         loadSettings();

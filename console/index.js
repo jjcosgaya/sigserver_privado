@@ -175,6 +175,26 @@ app.get('/api/status', auth, (req, res) => {
     res.json({ authenticated: true });
 });
 
+app.post('/api/players', auth, async (req, res) => {
+    try {
+        const logBefore = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, 'utf-8').split('\n').length : 0;
+        await sendCommand('players');
+        await new Promise(r => setTimeout(r, 500));
+        const logs = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, 'utf-8') : '';
+        const lines = logs.split('\n').slice(logBefore - 2);
+        const players = [];
+        for (const line of lines) {
+            const match = line.match(/^\s*(\d+)\s*\|\s*(\d+)\s+\S+\s+(alive|spec|roam|idle)\s+([\d.]+)\s+(.+)$/);
+            if (match) {
+                players.push({ id: parseInt(match[1]), world: parseInt(match[2]), state: match[3], score: parseFloat(match[4]), name: match[5].trim() });
+            }
+        }
+        res.json(players);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/');
