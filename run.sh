@@ -158,7 +158,7 @@ check_node() {
 
 show_join_info() {
   local ws_url="ws://localhost:$SERVER_PORT"
-  local sigmally_link="https://one.sigmally.com?ip=wss://localhost:$SERVER_PORT/sigmally.com"
+  local sigmally_link="https://one.sigmally.com?ip=ws://localhost:$SERVER_PORT/sigmally.com"
 
   echo ""
   echo -e "${GREEN}${BOLD} ╔══════════════════════════════════════╗${RESET}"
@@ -189,10 +189,12 @@ print_menu() {
     ws_url="${TUNNEL_URLS[0]/https:\/\//wss://}"
     sigmally_link="https://one.sigmally.com?ip=${ws_url}/sigmally.com"
     echo -e "  ${GREEN}Server:   ${DIM}● public${RESET} ${CYAN}${TUNNEL_URLS[0]}${RESET}"
-    echo -e "  ${GREEN}Join:     ${MAGENTA}${BOLD}$sigmally_link${RESET}"
   else
-    echo -e "  ${DIM}Server:   ○ local (ws://localhost:$SERVER_PORT)${RESET}"
+    ws_url="ws://localhost:$SERVER_PORT"
+    sigmally_link="https://one.sigmally.com?ip=${ws_url}/sigmally.com"
+    echo -e "  ${DIM}Server:   ○ local${RESET}"
   fi
+  echo -e "  ${GREEN}Join:     ${MAGENTA}${BOLD}$sigmally_link${RESET}"
 
   if [ -n "${TUNNEL_URLS[1]}" ]; then
     echo -e "  ${GREEN}Console:  ${DIM}● public${RESET} ${CYAN}${TUNNEL_URLS[1]}${RESET}"
@@ -247,14 +249,16 @@ while true; do
         ws_url="${TUNNEL_URLS[0]/https:\/\//wss://}"
         sigmally_link="https://one.sigmally.com?ip=${ws_url}/sigmally.com"
         echo -e "  ${GREEN}Server:   ${DIM}● public${RESET} ${CYAN}${TUNNEL_URLS[0]}${RESET}"
-        echo -e "  ${GREEN}Join:     ${MAGENTA}${BOLD}$sigmally_link${RESET}"
       else
-        echo -e "  ${DIM}Server:   ○ local (ws://localhost:$SERVER_PORT)${RESET}"
+        ws_url="ws://localhost:$SERVER_PORT"
+        sigmally_link="https://one.sigmally.com?ip=${ws_url}/sigmally.com"
+        echo -e "  ${DIM}Server:   ○ local${RESET}"
       fi
+      echo -e "  ${GREEN}Join:     ${MAGENTA}${BOLD}$sigmally_link${RESET}"
       if [ -n "${TUNNEL_URLS[1]}" ]; then
         echo -e "  ${GREEN}Console:  ${DIM}● public${RESET} ${CYAN}${TUNNEL_URLS[1]}${RESET}"
       else
-        echo -e "  ${DIM}Console:  ○ local (http://localhost:$CONSOLE_PORT)${RESET}"
+        echo -e "  ${DIM}Console:  ○ local${RESET}"
       fi
       echo ""
       ;;
