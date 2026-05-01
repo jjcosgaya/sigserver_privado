@@ -14,5 +14,8 @@ package-lock.json
 # node-gyp
 build
 
+# logs
+logs
+
 # other
 **/.DS_store
