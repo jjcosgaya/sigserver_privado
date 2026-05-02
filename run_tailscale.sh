@@ -240,19 +240,19 @@ while true; do
       if [ ${#FUNNEL_URLS[@]} -gt 0 ] && [ -n "${FUNNEL_URLS[0]}" ]; then
         echo -e "${YELLOW}Server is already exposed${RESET}"
       else
-        start_funnel $SERVER_PORT "Game Server"
+        start_funnel $SERVER_PORT "Game Server" "443"
       fi
       ;;
     c|C)
       if [ ${#FUNNEL_URLS[@]} -gt 1 ] && [ -n "${FUNNEL_URLS[1]}" ]; then
         echo -e "${YELLOW}Console is already exposed${RESET}"
       else
-        start_funnel $CONSOLE_PORT "Console"
+        start_funnel $CONSOLE_PORT "Console" "8443"
       fi
       ;;
     b|B)
-      start_funnel $SERVER_PORT "Game Server"
-      start_funnel $CONSOLE_PORT "Console"
+      start_funnel $SERVER_PORT "Game Server" "443"
+      start_funnel $CONSOLE_PORT "Console" "8443"
       ;;
     u|U)
       echo ""
