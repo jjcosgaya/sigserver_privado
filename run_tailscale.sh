@@ -123,19 +123,28 @@ start_console() {
 start_funnel() {
   local port=$1
   local name=$2
-  local log_file="/tmp/tailscale-funnel-${port}.log"
+  local funnel_port=$3
+  local log_file="/tmp/tailscale-funnel-${funnel_port}.log"
   rm -f "$log_file"
 
   echo -e "${YELLOW}Starting Tailscale Funnel for $name (port $port)...${RESET}"
 
-  nohup tailscale funnel $port >> "$log_file" 2>&1 &
+  if [ "$funnel_port" = "443" ]; then
+    nohup tailscale funnel --bg $port >> "$log_file" 2>&1 &
+  else
+    nohup tailscale funnel --bg --https=$funnel_port $port >> "$log_file" 2>&1 &
+  fi
   FUNNEL_PIDS+=($!)
 
   sleep 3
 
   local url=""
   for i in {1..10}; do
-    url=$(grep -oP 'https://[a-zA-Z0-9._-]+\.ts\.net' "$log_file" 2>/dev/null | head -1 || true)
+    if [ "$funnel_port" = "443" ]; then
+      url=$(grep -oP 'https://[a-zA-Z0-9._-]+\.ts\.net' "$log_file" 2>/dev/null | head -1 || true)
+    else
+      url=$(grep -oP "https://[a-zA-Z0-9._-]+\.ts\.net:${funnel_port}" "$log_file" 2>/dev/null | head -1 || true)
+    fi
     [ -n "$url" ] && break
     sleep 1
   done
