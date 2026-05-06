@@ -123,6 +123,9 @@ sudo tailscale funnel --bg --https=8443 5000
 
 # Ver URLs asignadas
 tailscale funnel status
+
+# Apagar el funnel (deja de exponer)
+sudo tailscale funnel off
 ```
 
 El script `run_tailscale.sh` incluido en el repositorio automatiza todo este proceso con un menú interactivo.
