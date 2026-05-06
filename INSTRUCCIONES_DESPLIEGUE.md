@@ -1,153 +1,164 @@
-# Guía de Despliegue en Oracle Cloud - Sigmally Server
+# Guía de Despliegue en VPS — Sigmally Server
 
-Esta guía detalla los pasos para poner en marcha el servidor de Sigmally en una instancia de Oracle Cloud (Ubuntu/Debian) con acceso SSH.
+Guía genérica para desplegar el servidor de Sigmally en cualquier VPS (Ubuntu/Debian).  
+**No necesitas abrir puertos** — usamos Cloudflare Tunnel o Tailscale Funnel para exponer los servicios.
 
 ---
 
-## 1. Preparación de la Máquina (SSH)
+## 1. Requisitos
 
-Conéctate a tu instancia y ejecuta los siguientes comandos para instalar las dependencias necesarias. **Es fundamental usar Node.js v20 o superior** para evitar errores de sintaxis moderna (`?.`).
+- Node.js ≥ 20
+- npm o pnpm
+- PM2 (para gestión de procesos)
+- `build-essential` y `python3` (para compilar el módulo C++)
 
 ```bash
-# Instalar repositorio oficial de Node.js v20
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-
-# Actualizar e instalar herramientas de compilación y Node.js
 sudo apt update
-sudo apt install -y build-essential python3 nodejs npm
-
-# Instalar pnpm (recomendado para gestionar dependencias)
-sudo npm install -g pnpm
-
-# Instalar PM2 (para gestión de procesos)
-sudo npm install -g pm2
+sudo apt install -y build-essential python3 nodejs
+sudo npm install -g pm2 pnpm
 ```
 
 ---
 
 ## 2. Instalación del Servidor
 
-Sube tu carpeta del proyecto al servidor o clónala. Una vez dentro de la carpeta `sig-server`:
+Sube el proyecto al VPS (scp, rsync, git clone) y ejecuta:
 
 ```bash
-# Instalar las dependencias del proyecto (compilará el módulo C++ corregido)
+cd sig-server
 pnpm install
-
-# Instalar dependencias adicionales para el Dashboard
-pnpm install express body-parser
-
-# Verificar que el archivo settings.json tiene el puerto 3000
-# echo '{"listeningPort": 3000}' > settings.json
 ```
 
 ---
 
-## 3. Apertura de Puertos ( Firewall de Linux )
-
-Oracle Cloud usa `iptables` por defecto. Debes abrir los puertos necesarios en el sistema operativo:
+## 3. Ejecución Permanente con PM2
 
 ```bash
-# Abrir puertos al principio de la lista para asegurar acceso (fundamental en Oracle)
-sudo iptables -I INPUT 1 -p tcp --dport 3000 -j ACCEPT
-sudo iptables -I INPUT 1 -p tcp --dport 4000 -j ACCEPT
-sudo iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
-
-# Guardar los cambios para que persistan tras reiniciar
-sudo netfilter-persistent save
-```
-
----
-
-## 4. Configuración en el Panel de Oracle ( Web )
-
-Debes permitir el tráfico desde la consola de Oracle Cloud:
-
-1. Ve a **Compute** -> **Instances** -> Haz clic en tu instancia.
-2. En **Instance Details**, haz clic en la **Subnet** (Subred).
-3. Haz clic en la **Default Security List** (Lista de seguridad).
-4. Haz clic en **Add Ingress Rules** (Agregar regla de entrada).
-5. Configura la regla:
-   - **Source Type:** CIDR
-   - **Source CIDR:** `0.0.0.0/0`
-   - **IP Protocol:** `TCP`
-   - **Destination Port Range:** `80, 443, 3000, 4000`
-   - **Description:** Sigmally Server & Dashboard Ports
-6. Haz clic en **Add Ingress Rules**.
-
----
-
-## 5. Ejecución Permanente con PM2
-
-Para que el servidor funcione 24/7 y puedas usar la consola interactiva:
-
-```bash
-# Arrancar el servidor de juego
+# Servidor de juego (puerto 3000)
 pm2 start cli/index.js --name "sig-server"
 
-# Arrancar el Panel de Control (Dashboard)
-pm2 start dashboard.js --name "sig-dashboard"
+# Consola administrativa (puerto 5000)
+pm2 start console/index.js --name "sig-console"
 
-# --- COMANDOS ÚTILES ---
-pm2 status                  # Ver si los procesos están online (verde)
-pm2 logs sig-server         # Ver errores si el servidor se cae
-pm2 attach sig-server       # Entrar a la consola interactiva (@ setting...)
-pm2 restart all             # Reiniciar todo el sistema
+# Guardar la configuración para que sobreviva a reinicios
+pm2 save
+pm2 startup
 ```
 
----
+Comandos útiles:
 
-## 6. Uso del Panel de Control (Dashboard)
-
-Una vez arrancado con PM2, puedes acceder al panel desde tu navegador:
-
-- **URL:** `http://TU_IP_PUBLICA:4000`
-- **Funciones en Tiempo Real (🚀):**
-  - **Cambio de Ajustes:** La velocidad, masa inicial, etc., se aplican **al instante** sin reiniciar la partida y sin desconectar a nadie gracias al puente de sockets interno.
-  - **Acciones Rápidas:** Botones para añadir bots o ver estadísticas "al vuelo".
-  - **Botón Guardar:** Los cambios hechos desde el panel son temporales hasta que pulsas el botón "Guardar a settings.json".
-  - **Logs en Vivo:** El panel muestra los últimos mensajes de la consola del servidor automáticamente.
-- **Seguridad:** Recuerda editar la variable `PASSWORD` dentro de `dashboard.js` antes de lanzarlo.
-
----
-
-## 7. Conexión Segura (WSS) con Cloudflare Tunnel
-
-Si quieres usar `wss://` sin dominio propio y evitar errores de seguridad:
-
-1. **Instalar cloudflared:**
 ```bash
+pm2 status                  # Ver estado
+pm2 logs sig-server         # Ver logs (también funciona con el id)
+pm2 attach 0                # Consola interactiva (usa el id, ej: 0)
+pm2 restart sig-server      # Reiniciar un proceso (o con el id)
+pm2 restart all             # Reiniciar todo
+```
+
+Puedes usar nombre o id numérico indistintamente. Si no te funciona el nombre, saca el id con `pm2 id sig-server` o simplemente `pm2 status`.
+
+### Usar los scripts `run.sh` y `run_tailscale.sh` con PM2
+
+Los scripts `run.sh` (Cloudflare) y `run_tailscale.sh` (Tailscale) lanzan el servidor, la consola y el túnel/funnel automáticamente. Para ejecutarlos como proceso permanente con PM2:
+
+```bash
+pm2 start run.sh --interpreter bash --name "sig-server"
+pm2 save
+```
+
+La parte interactiva del menú se redirigirá a los logs.
+
+**Alternativa recomendada** — lanza cada componente por separado (tal como se explica arriba). Es más estable, puedes reiniciar cada pieza individualmente y los logs no se mezclan.
+
+---
+
+## 4. Exponer al Público (sin abrir puertos)
+
+Elige una de las dos opciones según prefieras Cloudflare o Tailscale.
+
+### Opción A: Cloudflare Tunnel (recomendado)
+
+```bash
+# Instalar cloudflared
 wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared
 chmod +x cloudflared
 sudo mv cloudflared /usr/local/bin/
+
+# Túnel para el servidor de juego
+pm2 start "cloudflared tunnel --url http://localhost:3000" --name "tunnel-game"
+
+# Túnel para la consola
+pm2 start "cloudflared tunnel --url http://localhost:5000" --name "tunnel-console"
+
+# Obtener las URLs
+pm2 logs tunnel-game --lines 50 --no-append
+pm2 logs tunnel-console --lines 50 --no-append
 ```
 
-2. **Crear el túnel con PM2:**
+Busca las líneas con `https://XXXXXXX.trycloudflare.com`.
+
+### Opción B: Tailscale Funnel
+
+Requiere Tailscale instalado y autenticado:
+
 ```bash
-pm2 start "cloudflared tunnel --url http://localhost:3000" --name "tunnel"
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
 ```
 
-3. **Obtener la URL segura:**
+(
+Dentro de un contenedor:
 ```bash
-pm2 logs tunnel --lines 50 --no-append
+tailscaled --tun=userspace-networking --state=/var/lib/tailscale/tailscaled.state &
 ```
-Busca la URL que termina en `.trycloudflare.com`.
+)
+
+```bash
+# Exponer servidor juego (puerto 443)
+sudo tailscale funnel --bg 3000
+
+# Exponer consola (puerto 8443)
+sudo tailscale funnel --bg --https=8443 5000
+
+# Ver URLs asignadas
+tailscale funnel status
+```
+
+El script `run_tailscale.sh` incluido en el repositorio automatiza todo este proceso con un menú interactivo.
 
 ---
 
-## 8. Cómo Conectar al Juego
+## 5. Cómo Conectar al Juego
 
-Comparte la URL o la IP con tus amigos:
+Comparte el enlace correspondiente según el método que hayas elegido:
 
-- **Opción Segura (wss):** 
-  `https://one.sigmally.com?ip=wss://TU_URL_TRYCLOUDFLARE_COM/sigmally.com`
-- **Opción Directa (ws):** 
-  `https://one.sigmally.com?ip=ws://TU_IP_PUBLICA:3000/sigmally.com`
+- **Cloudflare Tunnel:**
+  `https://one.sigmally.com?ip=wss://TU_URL.trycloudflare.com/sigmally.com`
+
+- **Tailscale Funnel:**
+  `https://one.sigmally.com?ip=wss://TU_MACHINA.ts.net/sigmally.com`
+
+- **Conexión local (mismo VPS):**
+  `https://one.sigmally.com?ip=ws://localhost:3000/sigmally.com`
 
 ---
 
-## 9. Solución de Problemas (Troubleshooting)
+## 6. Consola de Administración
 
-- **El Dashboard no carga:** Verifica que el puerto 4000 esté abierto en Oracle y en iptables (Pasos 3 y 4). Comprueba que el proceso esté verde en `pm2 status`.
-- **Error de Sintaxis (`?.`):** Actualiza Node.js a la v20 (Paso 1).
-- **El servidor de juego no responde al Dashboard:** Asegúrate de que el `SIG_SERVER_ID` en `dashboard.js` coincide con el ID que muestra `pm2 status`.
+La consola corre en el puerto 5000. Una vez expuesta con Cloudflare o Tailscale, accede vía navegador.
+
+- **Función:** cambiar ajustes en caliente (velocidad, masa inicial, etc.), añadir bots, ver estadísticas.
+- **Seguridad:** edita la variable `CONSOLE_PASSWORD` en `console/index.js` antes de exponerla.
+
+---
+
+## 7. Solución de Problemas
+
+| Problema | Causa / Solución |
+|---|---|
+| Error de sintaxis (`?.`) | Node.js < 20. Actualiza a v20. |
+| El túnel no arranca | cloudflared desactualizado. Descarga la última versión. |
+| Tailscale no conecta | Ejecuta `tailscale up` para autenticarte. |
+| El servidor no responde | Revisa `pm2 logs sig-server`. |
+| La consola no carga | Verifica que el proceso esté vivo con `pm2 status`. |
