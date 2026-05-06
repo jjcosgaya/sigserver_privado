@@ -224,41 +224,13 @@ class World {
      */
     getMultiboxPos(player, cellSize) {
         const ip = player.router.remoteAddress;
-        const spawningName = player.router.spawningAttributes ? player.router.spawningAttributes.name : null;
-        const mouseX = player.router.mouseX;
-        const mouseY = player.router.mouseY;
-        const mouseMoved = mouseX !== 0 || mouseY !== 0;
 
         let candidates = this.players.filter(p => {
             if (p === player || p.ownedCells.length === 0) return false;
-
-            const sameIP = !!(ip && ip !== '127.0.0.1' && p.router.remoteAddress === ip);
-            const sameName = !!(spawningName && p.leaderboardName === spawningName);
-            const otherMouseMoved = p.router.mouseX !== 0 || p.router.mouseY !== 0;
-            const sameMouse = mouseMoved && otherMouseMoved &&
-                Math.abs(p.router.mouseX - mouseX) < 5 &&
-                Math.abs(p.router.mouseY - mouseY) < 5;
-
-            if (sameMouse) return true;
-
-            let matches = 0;
-            if (sameIP) matches++;
-            if (sameName) matches++;
-            return matches >= 2;
+            return !!(ip && ip !== '127.0.0.1' && p.router.remoteAddress === ip);
         });
 
         if (candidates.length === 0) return null;
-
-        if (mouseMoved) {
-            const bestCandidates = candidates.filter(p => {
-                const otherMouseMoved = p.router.mouseX !== 0 || p.router.mouseY !== 0;
-                return otherMouseMoved &&
-                    p.leaderboardName === spawningName &&
-                    Math.abs(p.router.mouseX - mouseX) < 10 &&
-                    Math.abs(p.router.mouseY - mouseY) < 10;
-            });
-            if (bestCandidates.length > 0) candidates = bestCandidates;
-        }
 
         let tries = this.settings.worldSafeSpawnTries;
         while (--tries >= 0) {
