@@ -227,34 +227,39 @@ class World {
         const spawningName = player.router.spawningAttributes ? player.router.spawningAttributes.name : null;
         const mouseX = player.router.mouseX;
         const mouseY = player.router.mouseY;
+        const mouseMoved = mouseX !== 0 || mouseY !== 0;
 
-        // 1. Filtrar posibles candidatos (Misma IP O Mismo Nombre O Misma posición de ratón)
         let candidates = this.players.filter(p => {
             if (p === player || p.ownedCells.length === 0) return false;
-            
-            // Misma IP (siempre que no sea null/localhost genérico)
-            if (ip && ip !== '127.0.0.1' && p.router.remoteAddress === ip) return true;
-            
-            // Mismo Nombre exacto
-            if (spawningName && p.leaderboardName === spawningName) return true;
-            
-            // Misma posición de ratón (muy probable en multibox)
-            if (Math.abs(p.router.mouseX - mouseX) < 5 && Math.abs(p.router.mouseY - mouseY) < 5) return true;
 
-            return false;
+            const sameIP = !!(ip && ip !== '127.0.0.1' && p.router.remoteAddress === ip);
+            const sameName = !!(spawningName && p.leaderboardName === spawningName);
+            const otherMouseMoved = p.router.mouseX !== 0 || p.router.mouseY !== 0;
+            const sameMouse = mouseMoved && otherMouseMoved &&
+                Math.abs(p.router.mouseX - mouseX) < 5 &&
+                Math.abs(p.router.mouseY - mouseY) < 5;
+
+            if (sameMouse) return true;
+
+            let matches = 0;
+            if (sameIP) matches++;
+            if (sameName) matches++;
+            return matches >= 2;
         });
 
         if (candidates.length === 0) return null;
 
-        // 2. Priorizar los que coincidan en NOMBRE y MOUSE (Multibox casi seguro)
-        const bestCandidates = candidates.filter(p => 
-            p.leaderboardName === spawningName && 
-            Math.abs(p.router.mouseX - mouseX) < 10 && 
-            Math.abs(p.router.mouseY - mouseY) < 10
-        );
-        if (bestCandidates.length > 0) candidates = bestCandidates;
+        if (mouseMoved) {
+            const bestCandidates = candidates.filter(p => {
+                const otherMouseMoved = p.router.mouseX !== 0 || p.router.mouseY !== 0;
+                return otherMouseMoved &&
+                    p.leaderboardName === spawningName &&
+                    Math.abs(p.router.mouseX - mouseX) < 10 &&
+                    Math.abs(p.router.mouseY - mouseY) < 10;
+            });
+            if (bestCandidates.length > 0) candidates = bestCandidates;
+        }
 
-        // 3. Intentar encontrar un hueco SEGURO cerca de las células de los candidatos
         let tries = this.settings.worldSafeSpawnTries;
         while (--tries >= 0) {
             const other = candidates[~~(Math.random() * candidates.length)];
@@ -269,22 +274,7 @@ class World {
                 return pos;
         }
 
-        // 4. Si no hay hueco seguro, forzar spawn cerca de la célula más grande de los mejores candidatos
-        let bestCell = null;
-        for (const p of candidates) {
-            for (const c of p.ownedCells) {
-                if (!bestCell || c.size > bestCell.size) bestCell = c;
-            }
-        }
-        
-        if (!bestCell) return null;
-
-        const angle = Math.random() * Math.PI * 2;
-        const dist = bestCell.size + cellSize + 60;
-        return {
-            x: Math.max(this.border.x - this.border.w + cellSize, Math.min(bestCell.x + Math.cos(angle) * dist, this.border.x + this.border.w - cellSize)),
-            y: Math.max(this.border.y - this.border.h + cellSize, Math.min(bestCell.y + Math.sin(angle) * dist, this.border.y + this.border.h - cellSize))
-        };
+        return null;
     }
     /**
      * @param {number} cellSize
