@@ -19,6 +19,9 @@ class EjectedCell extends Cell {
     get isSpiked() { return false; }
     get isAgitated() { return false; }
     get avoidWhenSpawning() { return false; }
+    get squareSize() {
+        return this.size * this.size * (this.world.settings.ejectedRewardMult || 1);
+    }
 
     /**
      * @param {Cell} other

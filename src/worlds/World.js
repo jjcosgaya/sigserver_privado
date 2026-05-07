@@ -650,7 +650,7 @@ class World {
             newCell.boost.d = this.settings.ejectedCellBoost;
             this.addCell(newCell);
             this.setCellAsBoosting(newCell);
-            cell.squareSize -= loss;
+            cell.squareSize -= loss * (this.settings.ejectedRewardMult || 1);
             this.updateCell(cell);
         }
     }

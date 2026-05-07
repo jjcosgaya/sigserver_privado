@@ -115,6 +115,7 @@ const value = Object.seal({
     ejectingLoss: 40, // OG: 43
     ejectDispersion: 0.3,
     ejectedCellBoost: 880, // OG: 780
+    ejectedRewardMult: 1, // scales both player mass loss & eater mass gain
 
     mothercellSize: 149,
     mothercellCount: 0,
