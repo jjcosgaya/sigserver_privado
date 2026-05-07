@@ -449,19 +449,29 @@ module.exports = (commands, chatCommands) => {
         }),
         genCommand({
             name: "mass",
-            args: "<id> <mass>",
-            desc: "set cell mass to all of a player's cells",
+            args: "<id> <totalMass>",
+            desc: "set the total mass of a player, distributed proportionally to cell sizes",
             /**
              * @param {ServerHandle} context
              */
             exec: (handle, context, args) => {
                 const player = getPlayerByID(args, handle, 0, true);
-                const mass = getFloat(args, handle, 1, "mass");
-                if (player === false || mass === false)
+                const totalMass = getFloat(args, handle, 1, "totalMass");
+                if (player === false || totalMass === false)
                     return;
-                const l = player.ownedCells.length;
-                for (let i = 0; i < l; i++) player.ownedCells[i].mass = mass;
-                handle.logger.print(`player now has ${mass * l} mass`);
+                const cells = player.ownedCells;
+                const l = cells.length;
+                if (l === 0) return handle.logger.print("player has no cells");
+                let currentTotal = 0;
+                for (let i = 0; i < l; i++) currentTotal += cells[i].mass;
+                if (currentTotal <= 0) {
+                    const perCell = totalMass / l;
+                    for (let i = 0; i < l; i++) cells[i].mass = perCell;
+                } else {
+                    for (let i = 0; i < l; i++)
+                        cells[i].mass = totalMass * cells[i].mass / currentTotal;
+                }
+                handle.logger.print(`player now has ${totalMass} total mass`);
             }
         }),
         genCommand({
@@ -499,6 +509,89 @@ module.exports = (commands, chatCommands) => {
                 for (let i = 0, l = player.ownedCells.length; i < l; i++)
                     player.world.removeCell(player.ownedCells[0]);
                 handle.logger.print("player killed");
+            }
+        }),
+        genCommand({
+            name: "move",
+            args: "<id> <cellId> <x> <y> [all]",
+            desc: "teleport a player's cell(s) to coordinates (cellId -1 + 'all' = all cells by delta)",
+            exec: (handle, context, args) => {
+                const player = getPlayerByID(args, handle, 0, true);
+                if (player === false) return;
+                const cellId = parseInt(args[1]);
+                const x = parseFloat(args[2]);
+                const y = parseFloat(args[3]);
+                const moveAll = args[4] === "all";
+                if (isNaN(cellId)) return handle.logger.print("invalid cell id");
+                if (isNaN(x) || isNaN(y)) return handle.logger.print("invalid coordinates");
+                if (moveAll) {
+                    let refCell = null;
+                    for (const c of player.ownedCells) {
+                        if (c.id === cellId || cellId === -1) { refCell = c; break; }
+                    }
+                    if (!refCell) return handle.logger.print("no cell found");
+                    const dx = x - refCell.x;
+                    const dy = y - refCell.y;
+                    for (const c of player.ownedCells) {
+                        c.x += dx;
+                        c.y += dy;
+                        player.world.updateCell(c);
+                    }
+                    handle.logger.print(`moved all cells of player ${player.id} by (${dx.toFixed(1)}, ${dy.toFixed(1)})`);
+                } else {
+                    for (const c of player.ownedCells) {
+                        if (c.id === cellId) {
+                            c.x = x;
+                            c.y = y;
+                            player.world.updateCell(c);
+                            handle.logger.print(`moved cell ${cellId} of player ${player.id} to (${x.toFixed(1)}, ${y.toFixed(1)})`);
+                            return;
+                        }
+                    }
+                    handle.logger.print("player does not own a cell with that id");
+                }
+            }
+        }),
+        genCommand({
+            name: "mapdata",
+            args: "",
+            desc: "dump map data as JSON for the console",
+            exec: (handle, context, args) => {
+                const data = { worlds: [] };
+                for (const wid in handle.worlds) {
+                    const w = handle.worlds[wid];
+                    const players = [];
+                    for (const p of w.players) {
+                        if (p.state !== 0) continue;
+                        const cells = p.ownedCells.map(c => ({
+                            id: c.id,
+                            x: Math.round(c.x * 100) / 100,
+                            y: Math.round(c.y * 100) / 100,
+                            size: Math.round(c.size * 100) / 100
+                        }));
+                        players.push({
+                            id: p.id,
+                            name: p.leaderboardName || p.cellName || "Unnamed",
+                            score: Math.round(p.score),
+                            color: p.cellColor,
+                            cells
+                        });
+                    }
+                    data.worlds.push({
+                        id: parseInt(wid),
+                        border: w.border,
+                        playerCount: w.players.length,
+                        stats: {
+                            playing: w.stats.playing,
+                            spectating: w.stats.spectating,
+                            name: w.stats.name,
+                            gamemode: w.stats.gamemode,
+                            uptime: w.stats.uptime
+                        },
+                        players
+                    });
+                }
+                handle.logger.print("MAPDATA:" + JSON.stringify(data));
             }
         }),
         genCommand({
