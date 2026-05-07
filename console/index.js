@@ -195,6 +195,43 @@ app.post('/api/players', auth, async (req, res) => {
     }
 });
 
+app.post('/api/map-data', auth, async (req, res) => {
+    try {
+        const logBefore = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, 'utf-8') : '';
+        const lineCountBefore = logBefore.split('\n').length;
+        await sendCommand('mapdata');
+        await new Promise(r => setTimeout(r, 500));
+        const logs = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, 'utf-8') : '';
+        const lines = logs.split('\n').slice(lineCountBefore - 2);
+        for (const line of lines) {
+            const idx = line.indexOf("MAPDATA:");
+            if (idx !== -1) {
+                const json = line.slice(idx + 8);
+                return res.json(JSON.parse(json));
+            }
+        }
+        res.json({ worlds: [] });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.post('/api/map/move', auth, async (req, res) => {
+    try {
+        const { playerId, cellId, x, y, all } = req.body;
+        if (playerId == null || x == null || y == null) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+        const cmd = all
+            ? `move ${playerId} ${cellId || -1} ${x} ${y} all`
+            : `move ${playerId} ${cellId} ${x} ${y}`;
+        await sendCommand(cmd);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/');
