@@ -4,384 +4,577 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sigmally Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         :root {
-            --bg: #0a0a0f;
-            --panel: #151520;
-            --border: #252535;
-            --accent: #007bff;
-            --text: #e0e0e0;
-            --success: #28a745;
-            --danger: #dc3545;
+            --bg:       #0d0e12;
+            --surface:  #13151b;
+            --surface2: #181a22;
+            --border:   #1e2130;
+            --border2:  #262a3a;
+            --accent:   #f0a500;
+            --accent2:  #d48f00;
+            --text:     #c8ccd8;
+            --muted:    #555c72;
+            --success:  #3ecf8e;
+            --danger:   #e05252;
+            --purple:   #8b5cf6;
         }
+
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
             overflow: hidden;
+            font-size: 14px;
         }
+
+        /* ── HEADER ── */
         header {
-            background: var(--panel);
-            padding: 10px 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border2);
+            padding: 0 20px;
+            height: 52px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid var(--border);
+            justify-content: space-between;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
         }
-        .main-container {
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .logo-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: #0d0e12;
+            stroke-width: 2.5;
+        }
+
+        .logo-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .logo-badge {
+            font-size: 10px;
+            background: var(--border2);
+            color: var(--muted);
+            border-radius: 2px;
+            padding: 2px 7px;
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 0.06em;
+            margin-left: 4px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        #status-msg {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            padding: 4px 10px;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .status-ok  { color: var(--success); background: rgba(62,207,142,0.08); border: 1px solid rgba(62,207,142,0.2); }
+        .status-busy{ color: var(--accent);  background: rgba(240,165,0,0.08);  border: 1px solid rgba(240,165,0,0.2);  }
+
+        /* ── LAYOUT ── */
+        .main {
             display: flex;
             flex: 1;
             overflow: hidden;
             flex-direction: column;
         }
+
         .top-section {
             display: flex;
-            flex: 6; /* Proporción para la parte superior */
+            flex: 6;
             overflow: hidden;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--border2);
         }
+
+        /* ── LEFT PANEL (Templates) ── */
         .left-panel {
-            width: 300px;
+            width: 280px;
+            flex-shrink: 0;
+            border-right: 1px solid var(--border2);
+            background: var(--surface);
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            border-right: 1px solid var(--border);
-            background: #11111a;
-            overflow-y: auto;
+            overflow: hidden;
         }
+
+        .panel-header {
+            padding: 14px 16px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .panel-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .template-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 12px;
+            margin-bottom: 8px;
+            transition: border-color 0.2s;
+        }
+
+        .template-card:hover { border-color: var(--border2); }
+
+        .template-card h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #e0e3ec;
+            margin-bottom: 4px;
+        }
+
+        .template-card p {
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* ── EDITOR ── */
         .editor-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 20px;
-        }
-        .terminal-section {
-            flex: 4; /* Proporción para la consola */
-            display: flex;
-            flex-direction: column;
-            background: #000;
-            padding: 15px 20px;
+            padding: 16px;
+            gap: 12px;
             overflow: hidden;
         }
-        h2 {
-            margin-top: 0;
-            font-size: 15px;
-            color: var(--accent);
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+
         #json-editor {
             flex: 1;
-            background: #1e1e2e;
-            color: #d1d1d1;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 15px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
+            background: #0a0b0f;
+            color: #a8b0c8;
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            padding: 14px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12.5px;
+            line-height: 1.6;
             resize: none;
             outline: none;
+            transition: border-color 0.2s;
         }
+
+        #json-editor:focus {
+            border-color: rgba(240,165,0,0.4);
+        }
+
+        .editor-toolbar {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ── TERMINAL ── */
+        .terminal-section {
+            flex: 4;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            padding: 12px 16px 14px;
+            overflow: hidden;
+            border-top: 1px solid var(--border);
+        }
+
+        .terminal-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+
+        .terminal-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
         .terminal-wrapper {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            background: #050505;
-            border: 1px solid #222;
-            border-radius: 4px;
+            background: #070809;
+            border: 1px solid var(--border2);
+            border-radius: 3px;
         }
+
         #terminal {
             flex: 1;
-            color: #00ff00;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 12px;
-            padding: 10px;
+            color: #7aef9a;
+            font-family: 'Space Mono', monospace;
+            font-size: 11.5px;
+            padding: 10px 12px;
             overflow-y: auto;
             white-space: pre-wrap;
+            line-height: 1.5;
         }
-        .command-input-group {
+
+        .cmd-row {
             display: flex;
-            background: #111;
-            border-top: 1px solid #222;
-            padding: 5px;
+            align-items: center;
+            background: #0a0c0e;
+            border-top: 1px solid var(--border);
+            padding: 6px 12px;
+            gap: 8px;
         }
-        .command-input-group span {
-            color: #00ff00;
-            padding: 8px 10px;
-            font-family: monospace;
-            font-weight: bold;
+
+        .cmd-prompt {
+            color: var(--accent);
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
         }
+
         #command-input {
             flex: 1;
             background: transparent;
             border: none;
-            color: white;
-            padding: 8px 0;
-            font-family: monospace;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
             outline: none;
-            font-size: 14px;
+            padding: 5px 0;
         }
-        .buttons {
-            margin-top: 10px;
-            display: flex;
-            gap: 10px;
-        }
+
+        #command-input::placeholder { color: var(--muted); font-size: 11px; }
+
+        /* ── BUTTONS ── */
         button {
-            padding: 8px 15px;
-            border-radius: 6px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 7px 13px;
+            border-radius: 3px;
             border: none;
             cursor: pointer;
-            font-weight: bold;
-            font-size: 13px;
-            transition: all 0.2s;
+            transition: filter 0.15s, transform 0.1s;
         }
-        button:hover { opacity: 0.8; transform: translateY(-1px); }
-        .btn-apply { background: var(--success); color: white; }
-        .btn-refresh { background: #444; color: white; }
-        .btn-save-tpl { background: #6f42c1; color: white; }
-        .btn-logout { background: var(--danger); color: white; }
-        
-        .template-card {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-        }
-        .template-card h3 {
-            margin: 0 0 5px 0;
-            font-size: 14px;
-            color: white;
-        }
-        .template-card p {
-            margin: 0 0 10px 0;
-            font-size: 11px;
-            color: #888;
-            line-height: 1.3;
-        }
-        .template-actions {
-            display: flex;
-            gap: 5px;
-        }
-        .template-actions button {
-            padding: 4px 8px;
-            font-size: 10px;
-            flex: 1;
-        }
-        .btn-load { background: var(--accent); color: white; }
-        .btn-del { background: #444; color: white; }
-        .btn-mass { background: #e67e22; color: white; }
 
-        .mass-row {
+        button:hover  { filter: brightness(1.15); }
+        button:active { transform: scale(0.97); }
+
+        .btn-apply   { background: var(--success); color: #0a1a12; }
+        .btn-refresh { background: var(--border2); color: var(--text); }
+        .btn-save-tpl{ background: var(--purple);  color: #fff; }
+        .btn-logout  { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+        .btn-logout:hover { color: var(--danger); border-color: var(--danger); filter: none; }
+        .btn-load    { background: var(--border2); color: var(--text); }
+        .btn-del     { background: transparent; color: var(--danger); border: 1px solid rgba(224,82,82,0.3); padding: 6px 10px; }
+        .btn-del:hover { background: rgba(224,82,82,0.1); filter: none; }
+        .btn-mass    { background: var(--accent); color: #0d0e12; }
+        .btn-mass-sm { background: var(--success); color: #0a1a12; }
+
+        /* ── MODALS ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(7,8,9,0.85);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 4px;
+            width: 420px;
+            padding: 28px;
+            position: relative;
+            animation: fadeUp 0.2s ease;
+        }
+
+        .modal-box.wide { width: 520px; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .modal-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #e0e3ec;
+            margin-bottom: 20px;
+        }
+
+        .modal-box input,
+        .modal-box textarea {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .modal-box input:focus,
+        .modal-box textarea:focus { border-color: rgba(240,165,0,0.4); }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        /* ── PLAYERS ── */
+        .player-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #0a0a0f;
-            padding: 10px 12px;
-            border-radius: 6px;
-            margin-bottom: 6px;
+            background: var(--bg);
             border: 1px solid var(--border);
-        }
-        .mass-row .player-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            flex: 1;
-            min-width: 0;
-        }
-        .mass-row .player-name {
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        .mass-row .player-meta {
-            display: flex;
+            border-radius: 3px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
             gap: 12px;
         }
-        .mass-row .player-id {
-            color: #666;
-            font-size: 11px;
-        }
-        .mass-row .player-score {
-            color: #888;
-            font-size: 11px;
-        }
-        .mass-row .player-input-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-        .mass-row input {
-            width: 120px;
+
+        .player-info { flex: 1; min-width: 0; }
+        .player-name { color: #e0e3ec; font-weight: 600; font-size: 13px; }
+        .player-meta { display: flex; gap: 12px; margin-top: 2px; }
+        .player-id, .player-score { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+        .player-input-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+        .player-input-group input {
+            width: 110px;
             padding: 6px 8px;
-            background: #151520;
-            border: 1px solid var(--border);
-            color: white;
-            border-radius: 4px;
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            color: var(--text);
+            border-radius: 3px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
             text-align: right;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        .mass-row button {
-            margin-left: 8px;
-            padding: 6px 10px;
-            font-size: 11px;
-        }
-        .mass-list-container {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-bottom: 15px;
+            outline: none;
         }
 
-        #modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            justify-content: center; align-items: center;
-            z-index: 1000;
-        }
-        #mass-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            justify-content: center; align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: var(--panel);
-            padding: 25px;
-            border-radius: 12px;
-            width: 400px;
-            border: 1px solid var(--border);
-        }
-        .modal-content input, .modal-content textarea {
-            width: 100%;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #0a0a0f;
-            border: 1px solid var(--border);
-            color: white;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
+        .mass-list-container { max-height: 320px; overflow-y: auto; }
 
-        #status-msg { margin-left: 10px; font-size: 13px; font-weight: bold; }
-        ::-webkit-scrollbar { width: 6px; }
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
     </style>
 </head>
 <body>
+
+    <!-- HEADER -->
     <header>
-        <h1 style="margin:0; font-size: 18px;">SIGMALLY <span style="color:var(--accent)">CONSOLE</span></h1>
-        <div style="display: flex; align-items: center;">
+        <div class="logo-row">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <span class="logo-text">Sigmally</span>
+            <span class="logo-badge">Console</span>
+        </div>
+        <div class="header-right">
             <span id="status-msg"></span>
-            <a href="/logout"><button class="btn-logout" style="margin-left: 15px;">SALIR</button></a>
+            <a href="/logout"><button class="btn-logout">Cerrar sesión</button></a>
         </div>
     </header>
 
-    <div class="main-container">
+    <!-- MAIN -->
+    <div class="main">
         <div class="top-section">
+
+            <!-- LEFT: Templates -->
             <div class="left-panel">
-                <h2>Templates</h2>
-                <div id="templates-list">
-                    <!-- Templates aquí -->
+                <div class="panel-header">
+                    <span class="panel-title">Templates</span>
+                    <button class="btn-save-tpl" style="padding:4px 10px;font-size:9px;" onclick="showSaveModal()">+ Guardar</button>
+                </div>
+                <div class="panel-body" id="templates-list">
+                    <div style="color:var(--muted);font-size:12px;padding:8px 4px;">Sin templates guardados.</div>
                 </div>
             </div>
 
+            <!-- RIGHT: Editor -->
             <div class="editor-container">
-                <h2>Configuración del Servidor (JSON)</h2>
+                <div class="panel-header" style="padding:0 0 10px;border:none;">
+                    <span class="panel-title">Configuración del Servidor</span>
+                </div>
                 <textarea id="json-editor" spellcheck="false"></textarea>
-                <div class="buttons">
-                    <button class="btn-apply" onclick="applySettings()">APLICAR AL SERVER</button>
-                    <button class="btn-refresh" onclick="loadSettings()">RECARGAR JSON</button>
-                    <button class="btn-save-tpl" onclick="showSaveModal()">GUARDAR TEMPLATE</button>
+                <div class="editor-toolbar">
+                    <button class="btn-apply"    onclick="applySettings()">✓ Aplicar al servidor</button>
+                    <button class="btn-refresh"  onclick="loadSettings()">↺ Recargar JSON</button>
+                    <button class="btn-save-tpl" onclick="showSaveModal()">⊕ Guardar template</button>
                 </div>
             </div>
         </div>
 
+        <!-- TERMINAL -->
         <div class="terminal-section">
-            <h2>
-                <span>Consola del Servidor</span>
-                <span style="display: flex; align-items: center; gap: 8px;">
-                    <button class="btn-mass" style="padding: 3px 8px; font-size: 10px;" onclick="showMassModal()">GESTIONAR MASAS</button>
-                    <span style="font-size: 10px; color: #555;">Logs en tiempo real</span>
-                </span>
-            </h2>
+            <div class="terminal-bar">
+                <div class="terminal-label">
+                    <span class="live-dot"></span>
+                    Logs en tiempo real
+                </div>
+                <button class="btn-mass" style="padding:4px 12px;" onclick="showMassModal()">⊕ Gestionar masas</button>
+            </div>
             <div class="terminal-wrapper">
                 <div id="terminal">Conectando con logs...</div>
-                <div class="command-input-group">
-                    <span>></span>
-                    <input type="text" id="command-input" placeholder="Escribe un comando (ej: players, mass 1 1000, addbot 0 10)..." autocomplete="off">
+                <div class="cmd-row">
+                    <span class="cmd-prompt">›</span>
+                    <input type="text" id="command-input" placeholder="Escribe un comando (players, mass 1 1000, addbot 0 10...)" autocomplete="off">
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Guardar Template -->
-    <div id="modal">
-        <div class="modal-content">
-            <h2 style="color: white;">Guardar Template</h2>
-            <input type="text" id="tpl-id" placeholder="ID del archivo (ej: modo_guerra)">
+    <!-- MODAL: Guardar Template -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-box">
+            <div class="modal-title">Guardar Template</div>
+            <input type="text" id="tpl-id"   placeholder="ID del archivo (ej: modo_guerra)">
             <input type="text" id="tpl-name" placeholder="Nombre visible (ej: Configuración de Guerra)">
-            <textarea id="tpl-desc" placeholder="Descripción de este modo..."></textarea>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button style="background: #444; color: white;" onclick="closeModal()">CANCELAR</button>
-                <button class="btn-apply" onclick="saveTemplate()">GUARDAR</button>
+            <textarea id="tpl-desc" placeholder="Descripción de este modo..." rows="3"></textarea>
+            <div class="modal-footer">
+                <button class="btn-refresh" onclick="closeModal()">Cancelar</button>
+                <button class="btn-apply"   onclick="saveTemplate()">Guardar</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Gestionar Masas -->
-    <div id="mass-modal" style="display: none;">
-        <div class="modal-content" style="width: 500px;">
-            <h2 style="color: white;">Gestionar Masas de Jugadores</h2>
-            <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-                <button class="btn-refresh" onclick="loadPlayersForMass()" style="flex: 1;">REFRESCAR JUGADORES</button>
+    <!-- MODAL: Gestionar Masas -->
+    <div class="modal-overlay" id="mass-modal">
+        <div class="modal-box wide">
+            <div class="modal-title">Gestionar Masas de Jugadores</div>
+            <div style="margin-bottom:12px;">
+                <button class="btn-refresh" onclick="loadPlayersForMass()" style="width:100%;">↺ Refrescar jugadores</button>
             </div>
             <div class="mass-list-container" id="mass-list">
-                <p style="color: #666; font-size: 13px;">Pulsa "Refrescar Jugadores" para cargar la lista...</p>
+                <p style="color:var(--muted);font-size:12px;">Pulsa "Refrescar jugadores" para cargar la lista...</p>
             </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button style="background: #444; color: white;" onclick="closeMassModal()">CERRAR</button>
+            <div class="modal-footer">
+                <button class="btn-refresh" onclick="closeMassModal()">Cerrar</button>
             </div>
         </div>
     </div>
 
     <script>
+        // ── Settings ──
         async function loadSettings() {
             const res = await fetch('/api/settings');
-            if (res.status === 401) window.location.href = '/login.html';
+            if (res.status === 401) { window.location.href = '/login.html'; return; }
             const settings = await res.json();
             document.getElementById('json-editor').value = JSON.stringify(settings, null, 4);
-        }
-
-        async function loadTemplates() {
-            const res = await fetch('/api/templates');
-            const templates = await res.json();
-            const list = document.getElementById('templates-list');
-            list.innerHTML = templates.map(t => `
-                <div class="template-card">
-                    <h3>${t.name}</h3>
-                    <p>${t.desc}</p>
-                    <div class="template-actions">
-                        <button class="btn-load" onclick="loadTemplateIntoEditor('${t.id}')">EDITAR</button>
-                        <button class="btn-apply" onclick="applyTemplate('${t.id}')">USAR</button>
-                        <button class="btn-del" onclick="deleteTemplate('${t.id}')" title="Eliminar">X</button>
-                    </div>
-                </div>
-            `).join('');
         }
 
         async function applySettings() {
@@ -389,90 +582,45 @@
             const status = document.getElementById('status-msg');
             try {
                 const settings = JSON.parse(editor.value);
-                status.innerText = "Sincronizando...";
-                status.style.color = "yellow";
-                
+                status.className = 'status-busy';
+                status.innerText = '⟳  Sincronizando...';
+
                 const res = await fetch('/api/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(settings)
                 });
-                
+
                 if (res.ok) {
-                    status.innerText = "¡Sincronizado!";
-                    status.style.color = "#28a745";
-                    setTimeout(() => status.innerText = "", 3000);
+                    status.className = 'status-ok';
+                    status.innerText = '✓  Sincronizado';
+                    setTimeout(() => { status.innerText = ''; status.className = ''; }, 3000);
                 }
             } catch (e) {
-                alert("Error en el JSON: " + e.message);
+                alert('Error en el JSON: ' + e.message);
             }
         }
 
-        // Ejecutar comandos manuales
-        const cmdInput = document.getElementById('command-input');
-        let commandHistory = [];
-        let historyIndex = -1;
-
-        cmdInput.addEventListener('keydown', async (e) => {
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
-                    historyIndex++;
-                    cmdInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
-                }
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (historyIndex > 0) {
-                    historyIndex--;
-                    cmdInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
-                } else {
-                    historyIndex = -1;
-                    cmdInput.value = '';
-                }
-            } else if (e.key === 'Enter' && cmdInput.value.trim()) {
-                const command = cmdInput.value.trim();
-                cmdInput.value = '';
-                commandHistory.push(command);
-                historyIndex = -1;
-                
-                try {
-                    await fetch('/api/command', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ command })
-                    });
-                } catch (err) {
-                    console.error("Error enviando comando:", err);
-                }
+        // ── Templates ──
+        async function loadTemplates() {
+            const res = await fetch('/api/templates');
+            const templates = await res.json();
+            const list = document.getElementById('templates-list');
+            if (!templates.length) {
+                list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px;">Sin templates guardados.</div>';
+                return;
             }
-        });
-
-        function showSaveModal() {
-            document.getElementById('modal').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('modal').style.display = 'none';
-        }
-
-        async function saveTemplate() {
-            const id = document.getElementById('tpl-id').value;
-            const name = document.getElementById('tpl-name').value;
-            const desc = document.getElementById('tpl-desc').value;
-            const settings = JSON.parse(document.getElementById('json-editor').value);
-
-            if (!id) return alert("ID Requerido");
-
-            const res = await fetch('/api/templates/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, name, desc, settings })
-            });
-
-            if (res.ok) {
-                closeModal();
-                loadTemplates();
-            }
+            list.innerHTML = templates.map(t => `
+                <div class="template-card">
+                    <h3>${t.name}</h3>
+                    <p>${t.desc}</p>
+                    <div class="template-actions">
+                        <button class="btn-load" onclick="loadTemplateIntoEditor('${t.id}')">Editar</button>
+                        <button class="btn-apply" onclick="applyTemplate('${t.id}')">Usar</button>
+                        <button class="btn-del" onclick="deleteTemplate('${t.id}')">✕</button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         async function loadTemplateIntoEditor(id) {
@@ -484,7 +632,7 @@
         }
 
         async function applyTemplate(id) {
-            if (!confirm("¿Aplicar este template al servidor ahora mismo?")) return;
+            if (!confirm('¿Aplicar este template al servidor ahora mismo?')) return;
             const res = await fetch('/api/templates/' + id);
             const data = await res.json();
             document.getElementById('json-editor').value = JSON.stringify(data, null, 4);
@@ -492,54 +640,97 @@
         }
 
         async function deleteTemplate(id) {
-            if (!confirm("¿Borrar template?")) return;
+            if (!confirm('¿Borrar template?')) return;
             await fetch('/api/templates/' + id, { method: 'DELETE' });
             loadTemplates();
         }
 
+        // ── Modal Template ──
+        function showSaveModal() { document.getElementById('modal').classList.add('active'); }
+        function closeModal()    { document.getElementById('modal').classList.remove('active'); }
+
+        async function saveTemplate() {
+            const id       = document.getElementById('tpl-id').value;
+            const name     = document.getElementById('tpl-name').value;
+            const desc     = document.getElementById('tpl-desc').value;
+            const settings = JSON.parse(document.getElementById('json-editor').value);
+            if (!id) return alert('ID requerido');
+            const res = await fetch('/api/templates/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, name, desc, settings })
+            });
+            if (res.ok) { closeModal(); loadTemplates(); }
+        }
+
+        // ── Terminal & Commands ──
+        let commandHistory = [], historyIndex = -1;
+        const cmdInput = document.getElementById('command-input');
+
+        cmdInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    cmdInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) { historyIndex--; cmdInput.value = commandHistory[commandHistory.length - 1 - historyIndex]; }
+                else { historyIndex = -1; cmdInput.value = ''; }
+            } else if (e.key === 'Enter' && cmdInput.value.trim()) {
+                const command = cmdInput.value.trim();
+                cmdInput.value = '';
+                commandHistory.push(command);
+                historyIndex = -1;
+                try {
+                    await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command })
+                    });
+                } catch (err) { console.error(err); }
+            }
+        });
+
         function updateLogs() {
             fetch('/api/logs').then(r => r.text()).then(t => {
                 const term = document.getElementById('terminal');
-                const wasAtBottom = term.scrollHeight - term.clientHeight <= term.scrollTop + 50;
+                const atBottom = term.scrollHeight - term.clientHeight <= term.scrollTop + 50;
                 term.innerText = t;
-                if (wasAtBottom) term.scrollTop = term.scrollHeight;
-            }).catch(e => {});
+                if (atBottom) term.scrollTop = term.scrollHeight;
+            }).catch(() => {});
         }
 
-        function showMassModal() {
-            document.getElementById('mass-modal').style.display = 'flex';
-            loadPlayersForMass();
-        }
+        // ── Mass Modal ──
+        function showMassModal()  { document.getElementById('mass-modal').classList.add('active'); loadPlayersForMass(); }
+        function closeMassModal() { document.getElementById('mass-modal').classList.remove('active'); }
 
-        function closeMassModal() {
-            document.getElementById('mass-modal').style.display = 'none';
-        }
-
-        function getDynamicStep(value) {
-            if (value >= 500000) return 100000;
-            if (value >= 100000) return 25000;
-            if (value >= 50000) return 10000;
-            if (value >= 10000) return 5000;
-            if (value >= 5000) return 1000;
-            if (value >= 1000) return 500;
-            if (value >= 500) return 100;
+        function getDynamicStep(v) {
+            if (v >= 500000) return 100000;
+            if (v >= 100000) return 25000;
+            if (v >= 50000)  return 10000;
+            if (v >= 10000)  return 5000;
+            if (v >= 5000)   return 1000;
+            if (v >= 1000)   return 500;
+            if (v >= 500)    return 100;
             return 50;
         }
 
         async function loadPlayersForMass() {
             const list = document.getElementById('mass-list');
+            list.innerHTML = '<p style="color:var(--muted);font-size:12px;">Cargando jugadores...</p>';
             try {
-                list.innerHTML = '<p style="color: #666; font-size: 13px;">Cargando jugadores...</p>';
-                const res = await fetch('/api/players', { method: 'POST' });
+                const res     = await fetch('/api/players', { method: 'POST' });
                 const players = await res.json();
-                if (players.length === 0) {
-                    list.innerHTML = '<p style="color: #666; font-size: 13px;">No se encontraron jugadores. Asegúrate de que el servidor está corriendo.</p>';
+                if (!players.length) {
+                    list.innerHTML = '<p style="color:var(--muted);font-size:12px;">No se encontraron jugadores conectados.</p>';
                     return;
                 }
                 list.innerHTML = players.map(p => `
-                    <div class="mass-row">
+                    <div class="player-row">
                         <div class="player-info">
-                            <span class="player-name">${p.name}</span>
+                            <div class="player-name">${p.name}</div>
                             <div class="player-meta">
                                 <span class="player-id">ID: ${p.id}</span>
                                 <span class="player-score">Score: ${p.score}</span>
@@ -547,42 +738,35 @@
                         </div>
                         <div class="player-input-group">
                             <input type="number" id="mass-input-${p.id}" placeholder="Masa" min="0" step="100">
-                            <button class="btn-apply" onclick="setPlayerMass(${p.id})">APLICAR</button>
+                            <button class="btn-mass-sm" onclick="setPlayerMass(${p.id})">Aplicar</button>
                         </div>
                     </div>
                 `).join('');
+
                 players.forEach(p => {
-                    const input = document.getElementById(`mass-input-${p.id}`);
-                    input.addEventListener('wheel', (e) => {
+                    const inp = document.getElementById(`mass-input-${p.id}`);
+                    inp.addEventListener('wheel', (e) => {
                         e.preventDefault();
-                        const current = parseFloat(input.value) || 0;
-                        const step = getDynamicStep(current);
-                        input.value = Math.max(0, Math.round(e.deltaY < 0 ? current + step : current - step));
-                        input.step = step;
+                        const cur = parseFloat(inp.value) || 0, step = getDynamicStep(cur);
+                        inp.value = Math.max(0, Math.round(e.deltaY < 0 ? cur + step : cur - step));
                     });
-                    input.addEventListener('keydown', (e) => {
-                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                            e.preventDefault();
-                            const current = parseFloat(input.value) || 0;
-                            let step = getDynamicStep(current);
-                            if (e.shiftKey) step *= 10;
-                            input.value = Math.max(0, Math.round(e.key === 'ArrowUp' ? current + step : current - step));
-                            input.step = step;
-                        }
-                    });
-                    input.addEventListener('input', () => {
-                        const current = parseFloat(input.value) || 0;
-                        input.step = getDynamicStep(current);
+                    inp.addEventListener('keydown', (e) => {
+                        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+                        e.preventDefault();
+                        const cur = parseFloat(inp.value) || 0;
+                        let step = getDynamicStep(cur);
+                        if (e.shiftKey) step *= 10;
+                        inp.value = Math.max(0, Math.round(e.key === 'ArrowUp' ? cur + step : cur - step));
                     });
                 });
-            } catch (err) {
-                list.innerHTML = '<p style="color: #dc3545; font-size: 13px;">Error al cargar jugadores.</p>';
+            } catch {
+                list.innerHTML = '<p style="color:var(--danger);font-size:12px;">Error al cargar jugadores.</p>';
             }
         }
 
         async function setPlayerMass(playerId) {
-            const input = document.getElementById(`mass-input-${playerId}`);
-            const mass = input.value.trim();
+            const inp  = document.getElementById(`mass-input-${playerId}`);
+            const mass = inp.value.trim();
             if (!mass || isNaN(mass)) return;
             try {
                 await fetch('/api/command', {
@@ -590,14 +774,15 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ command: `mass ${playerId} ${mass}` })
                 });
-                input.style.borderColor = '#28a745';
-                setTimeout(() => input.style.borderColor = '', 1000);
-            } catch (err) {
-                input.style.borderColor = '#dc3545';
-                setTimeout(() => input.style.borderColor = '', 1000);
+                inp.style.borderColor = 'var(--success)';
+                setTimeout(() => inp.style.borderColor = '', 1000);
+            } catch {
+                inp.style.borderColor = 'var(--danger)';
+                setTimeout(() => inp.style.borderColor = '', 1000);
             }
         }
 
+        // ── Init ──
         loadSettings();
         loadTemplates();
         setInterval(updateLogs, 2000);
