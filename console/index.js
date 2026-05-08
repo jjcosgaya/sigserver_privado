@@ -136,7 +136,14 @@ app.post('/api/settings', auth, async (req, res) => {
         delete newSettings._template_name;
         delete newSettings._template_desc;
 
-        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 4));
+        // Merge with existing settings (supports partial updates)
+        let current = {};
+        try {
+            current = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+        } catch (e) {}
+        const merged = Object.assign({}, current, newSettings);
+
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(merged, null, 4));
         
         // Notificar al servidor que recargue los settings
         await sendCommand('reload');
