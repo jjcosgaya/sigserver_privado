@@ -591,7 +591,7 @@ module.exports = (commands, chatCommands) => {
                         players
                     });
                 }
-                handle.logger.print("MAPDATA:" + JSON.stringify(data));
+                handle.logger.printFile("MAPDATA:" + JSON.stringify(data));
             }
         }),
         genCommand({
