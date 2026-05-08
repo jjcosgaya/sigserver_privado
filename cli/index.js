@@ -148,7 +148,8 @@ function setupBridge() {
     const bridge = net.createServer((socket) => {
         socket.on('data', (data) => {
             const cmd = data.toString().trim();
-            logger.print(`[Dashboard Bridge] Recibido: "${cmd}"`);
+            if (cmd !== 'mapdata')
+                logger.print(`[Dashboard Bridge] Recibido: "${cmd}"`);
             
             // Especial: Si el comando es restart, lo hacemos con un pequeño delay
             if (cmd === 'restart') {
