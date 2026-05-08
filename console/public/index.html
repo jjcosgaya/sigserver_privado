@@ -217,6 +217,19 @@
             color: var(--muted);
         }
 
+        .sidebar-resize-handle {
+            width: 4px;
+            flex-shrink: 0;
+            cursor: col-resize;
+            background: var(--border);
+            transition: background 0.15s;
+            position: relative;
+            z-index: 3;
+        }
+
+        .sidebar-resize-handle:hover,
+        .sidebar-resize-handle.active { background: var(--accent); }
+
         .map-resize-handle {
             height: 4px;
             flex-shrink: 0;
@@ -421,11 +434,11 @@
         /* ── MAP CONTROLS ── */
         .map-controls {
             position: absolute;
-            bottom: 16px;
+            bottom: 12px;
             right: 16px;
             display: flex;
-            flex-direction: column;
-            gap: 3px;
+            flex-direction: row;
+            gap: 4px;
             z-index: 2;
         }
 
@@ -520,79 +533,23 @@
 
         .stats-hud span { color: var(--text); }
 
-        /* ── WORLD RESIZE ── */
-        .world-resize-btn {
+        /* ── WORLD RESET ── */
+        .world-reset-btn {
             position: absolute;
             top: 12px;
             left: 160px;
             background: rgba(7,8,9,0.7);
             border: 1px solid var(--border2);
             color: var(--muted);
-            padding: 4px 8px;
-            font-size: 14px;
+            padding: 4px 10px;
+            font-size: 11px;
             border-radius: 3px;
             cursor: pointer;
             z-index: 2;
-            line-height: 1;
+            font-family: 'Space Mono', monospace;
             transition: color 0.15s, border-color 0.15s;
         }
-
-        .world-resize-btn:hover { color: var(--text); border-color: var(--accent); }
-
-        .world-resize-panel {
-            display: none;
-            position: absolute;
-            top: 44px;
-            left: 12px;
-            background: var(--surface);
-            border: 1px solid var(--border2);
-            border-radius: 4px;
-            padding: 14px 16px;
-            z-index: 20;
-            min-width: 200px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-            animation: fadeUp 0.15s ease;
-        }
-
-        .world-resize-panel.visible { display: block; }
-
-        .world-resize-panel .wr-title {
-            font-family: 'Space Mono', monospace;
-            font-size: 10px;
-            font-weight: 700;
-            color: #e0e3ec;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .world-resize-panel .wr-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-
-        .world-resize-panel .wr-row label {
-            font-size: 11px;
-            color: var(--muted);
-            flex-shrink: 0;
-            width: 50px;
-        }
-
-        .world-resize-panel .wr-row input {
-            flex: 1;
-            padding: 5px 8px;
-            background: var(--bg);
-            border: 1px solid var(--border2);
-            border-radius: 3px;
-            color: var(--text);
-            font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            outline: none;
-        }
-
-        .world-resize-panel .wr-row input:focus { border-color: rgba(240,165,0,0.4); }
+        .world-reset-btn:hover { color: var(--text); border-color: var(--accent); }
 
         .world-resize-panel .wr-apply {
             width: 100%;
@@ -1080,6 +1037,7 @@
                         <div style="color:var(--muted);font-size:12px;padding:8px 4px;">Sin templates guardados.</div>
                     </div>
                 </div>
+                <div class="sidebar-resize-handle" id="config-resize-handle"></div>
                 <div class="editor-container">
                     <div class="panel-header" style="padding:0 0 10px;border:none;">
                         <span class="panel-title">Configuración del Servidor</span>
@@ -1118,6 +1076,7 @@
                         </div>
                     </div>
                 </div>
+                <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
                 <div class="map-container" id="map-container">
                     <canvas id="game-map"></canvas>
                     <div class="map-controls">
@@ -1128,19 +1087,7 @@
                     <canvas class="minimap" id="minimap" width="140" height="140"></canvas>
                     <div class="leaderboard" id="leaderboard"></div>
                     <div class="stats-hud" id="stats-hud"></div>
-                    <div class="world-resize-panel" id="world-resize-panel">
-                        <div class="wr-title">Redimensionar mundo</div>
-                        <div class="wr-row">
-                            <label>Ancho</label>
-                            <input type="number" id="wr-width" min="1000" step="1000">
-                        </div>
-                        <div class="wr-row">
-                            <label>Alto</label>
-                            <input type="number" id="wr-height" min="1000" step="1000">
-                        </div>
-                        <button class="wr-apply" onclick="applyWorldResize()">Aplicar</button>
-                    </div>
-                    <button class="world-resize-btn" id="world-resize-btn" onclick="toggleWorldResizePanel()" title="Redimensionar mundo">⬜</button>
+                    <button class="world-reset-btn" id="world-reset-btn" onclick="resetWorldSize()" title="Restablecer tamaño del mundo">⟲ Default</button>
                     <div class="context-popup" id="context-popup"></div>
                     <div class="map-tooltip" id="map-tooltip"></div>
                 </div>
@@ -1475,6 +1422,10 @@
             wasDrag: false
         };
 
+        // Border state for edge-drag resizing
+        let localBorder = null;
+        let hoveredBorderEdge = null;
+
         // ── HELPERS ──
         function worldToScreen(wx, wy) {
             return {
@@ -1488,6 +1439,29 @@
                 x: (sx - canvas.width / 2) / camera.zoom + camera.x,
                 y: (sy - canvas.height / 2) / camera.zoom + camera.y
             };
+        }
+
+        function findBorderEdge(sx, sy, border) {
+            const threshold = 8;
+            const leftX = worldToScreen(border.x - border.w, border.y).x;
+            const rightX = worldToScreen(border.x + border.w, border.y).x;
+            const topY = worldToScreen(border.x, border.y - border.h).y;
+            const bottomY = worldToScreen(border.x, border.y + border.h).y;
+            const l = Math.min(leftX, rightX), r = Math.max(leftX, rightX);
+            const t = Math.min(topY, bottomY), b = Math.max(topY, bottomY);
+            const onLeft = Math.abs(sx - l) < threshold && sy >= t && sy <= b;
+            const onRight = Math.abs(sx - r) < threshold && sy >= t && sy <= b;
+            const onTop = Math.abs(sy - t) < threshold && sx >= l && sx <= r;
+            const onBottom = Math.abs(sy - b) < threshold && sx >= l && sx <= r;
+            if (onTop && onLeft) return 'top-left';
+            if (onTop && onRight) return 'top-right';
+            if (onBottom && onLeft) return 'bottom-left';
+            if (onBottom && onRight) return 'bottom-right';
+            if (onLeft) return 'left';
+            if (onRight) return 'right';
+            if (onTop) return 'top';
+            if (onBottom) return 'bottom';
+            return null;
         }
 
         function colorIntToHex(c) {
@@ -1823,6 +1797,21 @@
                 return;
             }
 
+            // Border edge resize
+            if (mapData && mapData.worlds[0]) {
+                const edge = findBorderEdge(pos.x, pos.y, mapData.worlds[0].border);
+                if (edge) {
+            const b = localBorder || mapData.worlds[0].border;
+                    localBorder = { x: b.x, y: b.y, w: b.w, h: b.h };
+                    drag.active = true;
+                    drag.type = 'border-resize';
+                    drag.borderEdge = edge;
+                    drag.startX = pos.x;
+                    drag.startY = pos.y;
+                    return;
+                }
+            }
+
             // Start pan
             drag.active = true;
             drag.type = 'pan';
@@ -1840,7 +1829,19 @@
                 const dx = pos.x - drag.startX;
                 const dy = pos.y - drag.startY;
 
-                if (drag.type === 'pan') {
+                if (drag.type === 'border-resize') {
+                    if (localBorder) {
+                        const mouseWorld = screenToWorld(pos.x, pos.y);
+                        if (drag.borderEdge.includes('left') || drag.borderEdge.includes('right')) {
+                            localBorder.w = Math.max(500, Math.abs(mouseWorld.x - localBorder.x));
+                        }
+                        if (drag.borderEdge.includes('top') || drag.borderEdge.includes('bottom')) {
+                            localBorder.h = Math.max(500, Math.abs(mouseWorld.y - localBorder.y));
+                        }
+                        render();
+                    }
+                    return;
+                } else if (drag.type === 'pan') {
                     camera.x = drag.camStartX - dx / camera.zoom;
                     camera.y = drag.camStartY - dy / camera.zoom;
                     render();
@@ -1901,13 +1902,31 @@
                     document.getElementById('map-tooltip').classList.remove('visible');
                     render();
                 }
+                // Check border edge hover
+                if (mapData && mapData.worlds[0]) {
+                    const edge = findBorderEdge(pos.x, pos.y, mapData.worlds[0].border);
+                    if (edge !== hoveredBorderEdge) {
+                        hoveredBorderEdge = edge;
+                        render();
+                    }
+                    if (edge) {
+                        if (edge === 'left' || edge === 'right') canvas.style.cursor = 'col-resize';
+                        else if (edge === 'top' || edge === 'bottom') canvas.style.cursor = 'row-resize';
+                        else canvas.style.cursor = 'nwse-resize';
+                        return;
+                    }
+                }
+                if (hoveredBorderEdge) {
+                    hoveredBorderEdge = null;
+                    render();
+                }
                 canvas.style.cursor = 'grab';
             }
         }
 
         function onMouseUp(e) {
+            const pos = getCanvasPos(e);
             if (drag.active && (drag.type === 'cell' || drag.type === 'allcells')) {
-                const pos = getCanvasPos(e);
                 const wpos = screenToWorld(pos.x, pos.y);
                 const isDrag = Math.abs(pos.x - drag.startX) > 5 || Math.abs(pos.y - drag.startY) > 5;
 
@@ -1944,6 +1963,22 @@
                 for (const p of (mapData && mapData.worlds[0] ? mapData.worlds[0].players : [])) {
                     for (const c of p.cells) { delete c._dragX; delete c._dragY; }
                 }
+            } else if (drag.active && drag.type === 'border-resize') {
+                if (localBorder) {
+                    const dx = Math.abs(pos.x - drag.startX);
+                    const dy = Math.abs(pos.y - drag.startY);
+                    if (dx > 5 || dy > 5) {
+                        fetch('/api/settings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ worldMapW: Math.round(localBorder.w), worldMapH: Math.round(localBorder.h) })
+                        }).then(r => {
+                            if (r.ok) showToast(`Mundo redimensionado a ${Math.round(localBorder.w*2)}x${Math.round(localBorder.h*2)}`);
+                        }).catch(() => {});
+                    }
+                    localBorder = null;
+                }
+                drag.wasDrag = true;
             } else if (drag.active && drag.type === 'pan') {
                 drag.wasDrag = true;
             }
@@ -1981,6 +2016,7 @@
         function onMouseLeave(e) {
             hoveredPlayer = null;
             hoveredCell = null;
+            hoveredBorderEdge = null;
             document.getElementById('map-tooltip').classList.remove('visible');
             if (!drag.active) {
                 canvas.style.cursor = 'grab';
@@ -2081,7 +2117,7 @@
             }
 
             const world = mapData.worlds[0];
-            const border = world.border;
+            const border = localBorder || world.border;
 
             // Grid
             drawGrid(border);
@@ -2090,11 +2126,9 @@
             drawBorder(border);
 
             // Players
-            const sorted = [...world.players].sort((a, b) => {
-                const aMax = Math.max(...a.cells.map(c => c.size));
-                const bMax = Math.max(...b.cells.map(c => c.size));
-                return aMax - bMax;
-            });
+            for (const p of world.players) precomputeMaxSize(p);
+
+            const sorted = [...world.players].sort((a, b) => a._maxSize - b._maxSize);
 
             for (const player of sorted) {
                 if (player.cells.length > 1) {
@@ -2108,11 +2142,17 @@
             // Minimap
             renderMinimap();
 
-            // Leaderboard
-            renderLeaderboard();
+            // Skip DOM-heavy overlays during drag
+            if (!drag.active) {
+                renderLeaderboard();
+                renderStats();
+            }
+        }
 
-            // Stats
-            renderStats();
+        function precomputeMaxSize(player) {
+            let max = 0;
+            for (const c of player.cells) if (c.size > max) max = c.size;
+            player._maxSize = max;
         }
 
         function drawGrid(border) {
@@ -2161,8 +2201,9 @@
         }
 
         function drawBorder(border) {
-            const tl = worldToScreen(border.x - border.w, border.y + border.h);
-            const br = worldToScreen(border.x + border.w, border.y - border.h);
+            const b = localBorder || border;
+            const tl = worldToScreen(b.x - b.w, b.y + b.h);
+            const br = worldToScreen(b.x + b.w, b.y - b.h);
             const w = br.x - tl.x;
             const h = br.y - tl.y;
 
@@ -2170,18 +2211,45 @@
             ctx.lineWidth = 2;
             ctx.strokeRect(tl.x, tl.y, w, h);
 
+            // Highlight hovered/dragged edge
+            const highlight = drag.type === 'border-resize' ? drag.borderEdge : hoveredBorderEdge;
+            if (highlight) {
+                ctx.strokeStyle = 'rgba(240,165,0,0.9)';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                if (highlight === 'left' || highlight.includes('left')) {
+                    ctx.moveTo(tl.x, tl.y); ctx.lineTo(tl.x, br.y);
+                }
+                if (highlight === 'right' || highlight.includes('right')) {
+                    ctx.moveTo(br.x, tl.y); ctx.lineTo(br.x, br.y);
+                }
+                if (highlight === 'top' || highlight.includes('top')) {
+                    ctx.moveTo(tl.x, tl.y); ctx.lineTo(br.x, tl.y);
+                }
+                if (highlight === 'bottom' || highlight.includes('bottom')) {
+                    ctx.moveTo(tl.x, br.y); ctx.lineTo(br.x, br.y);
+                }
+                ctx.stroke();
+            }
+
             // Corner markers
             const m = 20;
             ctx.strokeStyle = 'rgba(240,165,0,0.3)';
             ctx.lineWidth = 1;
-            // top-left
             ctx.beginPath(); ctx.moveTo(tl.x + m, tl.y); ctx.lineTo(tl.x, tl.y); ctx.lineTo(tl.x, tl.y + m); ctx.stroke();
-            // top-right
             ctx.beginPath(); ctx.moveTo(br.x - m, tl.y); ctx.lineTo(br.x, tl.y); ctx.lineTo(br.x, tl.y + m); ctx.stroke();
-            // bottom-left
             ctx.beginPath(); ctx.moveTo(tl.x + m, br.y); ctx.lineTo(tl.x, br.y); ctx.lineTo(tl.x, br.y - m); ctx.stroke();
-            // bottom-right
             ctx.beginPath(); ctx.moveTo(br.x - m, br.y); ctx.lineTo(br.x, br.y); ctx.lineTo(br.x, br.y - m); ctx.stroke();
+
+            // Dimension label during resize
+            if (localBorder) {
+                ctx.fillStyle = 'rgba(240,165,0,0.8)';
+                ctx.font = '11px "Space Mono", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                const y = Math.min(tl.y, br.y) - 8;
+                ctx.fillText(`⬡ ${Math.round(b.w * 2)} × ${Math.round(b.h * 2)}`, (tl.x + br.x) / 2, y);
+            }
         }
 
         function drawCell(cell, player) {
@@ -2279,7 +2347,7 @@
             if (!mapData || !mapData.worlds[0]) return;
 
             const world = mapData.worlds[0];
-            const b = world.border;
+            const b = localBorder || world.border;
             const worldW = b.w * 2;
             const worldH = b.h * 2;
             const pad = 4;
@@ -2366,41 +2434,15 @@
             `;
         }
 
-        // ── WORLD RESIZE ──
-        function toggleWorldResizePanel() {
-            const panel = document.getElementById('world-resize-panel');
-            if (panel.classList.contains('visible')) {
-                panel.classList.remove('visible');
-                return;
-            }
-            if (mapData && mapData.worlds[0]) {
-                const b = mapData.worlds[0].border;
-                document.getElementById('wr-width').value = Math.round(b.w * 2);
-                document.getElementById('wr-height').value = Math.round(b.h * 2);
-            }
-            panel.classList.add('visible');
-        }
-
-        async function applyWorldResize() {
-            const w = parseInt(document.getElementById('wr-width').value);
-            const h = parseInt(document.getElementById('wr-height').value);
-            if (!w || !h || w < 1000 || h < 1000) {
-                showToast('Dimensiones mínimas: 1000');
-                return;
-            }
-            try {
-                const res = await fetch('/api/settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ worldMapW: w / 2, worldMapH: h / 2 })
-                });
-                if (res.ok) {
-                    showToast(`Mundo redimensionado a ${w}x${h}`);
-                    document.getElementById('world-resize-panel').classList.remove('visible');
-                }
-            } catch (e) {
-                showToast('Error al redimensionar');
-            }
+        // ── WORLD RESET ──
+        function resetWorldSize() {
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ worldMapW: 14000, worldMapH: 14000 })
+            }).then(r => {
+                if (r.ok) showToast('Mundo restablecido a 28000 × 28000');
+            }).catch(() => showToast('Error al restablecer'));
         }
 
         // ── ANIMATION LOOP ──
@@ -2409,6 +2451,46 @@
             render();
             animating = false;
         }
+
+        // ── SIDEBAR RESIZE ──
+        function setupSidebarResize() {
+            const handle = document.getElementById('sidebar-resize-handle');
+            const sidebar = document.getElementById('map-sidebar');
+            if (!handle || !sidebar) return;
+
+            const saved = localStorage.getItem('sidebarWidth');
+            if (saved) sidebar.style.width = saved + 'px';
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                handle.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                const startX = e.clientX;
+                const startW = sidebar.offsetWidth;
+
+                function onMove(ev) {
+                    const newW = Math.max(180, Math.min(startW + ev.clientX - startX, sidebar.parentElement.offsetWidth - 400));
+                    sidebar.style.width = newW + 'px';
+                    render();
+                }
+
+                function onUp() {
+                    handle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    localStorage.setItem('sidebarWidth', sidebar.offsetWidth);
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+
+        // ── SIDEBAR RESIZE END ──
 
         // ── MAP RESIZE ──
         function setupMapResize() {
@@ -2450,14 +2532,53 @@
             });
         }
 
+        // ── CONFIG SIDEBAR RESIZE ──
+        function setupConfigResize() {
+            const handle = document.getElementById('config-resize-handle');
+            const panel = document.querySelector('.left-panel');
+            if (!handle || !panel) return;
+
+            const saved = localStorage.getItem('configSidebarWidth');
+            if (saved) panel.style.width = saved + 'px';
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                handle.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                const startX = e.clientX;
+                const startW = panel.offsetWidth;
+
+                function onMove(ev) {
+                    const newW = Math.max(180, Math.min(startW + ev.clientX - startX, panel.parentElement.offsetWidth - 400));
+                    panel.style.width = newW + 'px';
+                }
+
+                function onUp() {
+                    handle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    localStorage.setItem('configSidebarWidth', panel.offsetWidth);
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+
         // ── INIT ──
         function init() {
             resizeCanvas();
             loadSettings();
             loadTemplates();
             setupMapResize();
+            setupSidebarResize();
+            setupConfigResize();
             setInterval(updateLogs, 2000);
-            setInterval(fetchMapData, 1000);
+            setInterval(fetchMapData, 300);
             fetchMapData();
             window.addEventListener('resize', () => {
                 resizeCanvas();
