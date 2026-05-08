@@ -163,9 +163,13 @@ app.get('/api/logs', auth, (req, res) => {
         if (!fs.existsSync(LOG_FILE)) {
             return res.send("No hay logs disponibles.");
         }
-        // Leer las últimas 100 líneas
-        const logs = fs.readFileSync(LOG_FILE, 'utf-8').split('\n').slice(-100).join('\n');
-        res.send(logs);
+        const logs = fs.readFileSync(LOG_FILE, 'utf-8').split('\n');
+        const filtered = [];
+        for (let i = logs.length - 1; i >= 0 && filtered.length < 250; i--) {
+            if (logs[i].includes("MAPDATA:")) continue;
+            filtered.unshift(logs[i]);
+        }
+        res.send(filtered.join('\n'));
     } catch (e) {
         res.status(500).send("Error leyendo logs: " + e.message);
     }
@@ -203,13 +207,14 @@ app.post('/api/map-data', auth, async (req, res) => {
         await new Promise(r => setTimeout(r, 500));
         const logs = fs.existsSync(LOG_FILE) ? fs.readFileSync(LOG_FILE, 'utf-8') : '';
         const lines = logs.split('\n').slice(lineCountBefore - 2);
+        let lastMatch = null;
         for (const line of lines) {
             const idx = line.indexOf("MAPDATA:");
             if (idx !== -1) {
-                const json = line.slice(idx + 8);
-                return res.json(JSON.parse(json));
+                lastMatch = line.slice(idx + 8);
             }
         }
+        if (lastMatch) return res.json(JSON.parse(lastMatch));
         res.json({ worlds: [] });
     } catch (e) {
         res.status(500).json({ error: e.message });
