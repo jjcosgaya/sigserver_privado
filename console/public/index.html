@@ -520,6 +520,96 @@
 
         .stats-hud span { color: var(--text); }
 
+        /* ── WORLD RESIZE ── */
+        .world-resize-btn {
+            position: absolute;
+            top: 12px;
+            left: 160px;
+            background: rgba(7,8,9,0.7);
+            border: 1px solid var(--border2);
+            color: var(--muted);
+            padding: 4px 8px;
+            font-size: 14px;
+            border-radius: 3px;
+            cursor: pointer;
+            z-index: 2;
+            line-height: 1;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .world-resize-btn:hover { color: var(--text); border-color: var(--accent); }
+
+        .world-resize-panel {
+            display: none;
+            position: absolute;
+            top: 44px;
+            left: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 4px;
+            padding: 14px 16px;
+            z-index: 20;
+            min-width: 200px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            animation: fadeUp 0.15s ease;
+        }
+
+        .world-resize-panel.visible { display: block; }
+
+        .world-resize-panel .wr-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            color: #e0e3ec;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .world-resize-panel .wr-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .world-resize-panel .wr-row label {
+            font-size: 11px;
+            color: var(--muted);
+            flex-shrink: 0;
+            width: 50px;
+        }
+
+        .world-resize-panel .wr-row input {
+            flex: 1;
+            padding: 5px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            outline: none;
+        }
+
+        .world-resize-panel .wr-row input:focus { border-color: rgba(240,165,0,0.4); }
+
+        .world-resize-panel .wr-apply {
+            width: 100%;
+            padding: 6px 0;
+            background: var(--accent);
+            color: #0d0e12;
+            border: none;
+            border-radius: 3px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: filter 0.15s;
+        }
+
+        .world-resize-panel .wr-apply:hover { filter: brightness(1.15); }
+
         /* ── CONTEXT POPUP ── */
         .context-popup {
             display: none;
@@ -1038,6 +1128,19 @@
                     <canvas class="minimap" id="minimap" width="140" height="140"></canvas>
                     <div class="leaderboard" id="leaderboard"></div>
                     <div class="stats-hud" id="stats-hud"></div>
+                    <div class="world-resize-panel" id="world-resize-panel">
+                        <div class="wr-title">Redimensionar mundo</div>
+                        <div class="wr-row">
+                            <label>Ancho</label>
+                            <input type="number" id="wr-width" min="1000" step="1000">
+                        </div>
+                        <div class="wr-row">
+                            <label>Alto</label>
+                            <input type="number" id="wr-height" min="1000" step="1000">
+                        </div>
+                        <button class="wr-apply" onclick="applyWorldResize()">Aplicar</button>
+                    </div>
+                    <button class="world-resize-btn" id="world-resize-btn" onclick="toggleWorldResizePanel()" title="Redimensionar mundo">⬜</button>
                     <div class="context-popup" id="context-popup"></div>
                     <div class="map-tooltip" id="map-tooltip"></div>
                 </div>
@@ -2252,12 +2355,52 @@
             const hours = Math.floor((uptime % 86400) / 3600);
             const mins = Math.floor((uptime % 3600) / 60);
             const uptimeStr = days > 0 ? `${days}d ${hours}h` : `${hours}h ${mins}m`;
+            const b = mapData.worlds[0].border;
+            const worldSize = b ? `${Math.round(b.w * 2)}x${Math.round(b.h * 2)}` : '?';
 
             el.innerHTML = `
                 Jugando: <span>${players.length}</span><br>
                 ${stats ? `Modo: <span>${escHtml(stats.gamemode || '?')}</span><br>` : ''}
+                Mundo: <span>${worldSize}</span><br>
                 ${stats ? `Uptime: <span>${uptimeStr}</span>` : ''}
             `;
+        }
+
+        // ── WORLD RESIZE ──
+        function toggleWorldResizePanel() {
+            const panel = document.getElementById('world-resize-panel');
+            if (panel.classList.contains('visible')) {
+                panel.classList.remove('visible');
+                return;
+            }
+            if (mapData && mapData.worlds[0]) {
+                const b = mapData.worlds[0].border;
+                document.getElementById('wr-width').value = Math.round(b.w * 2);
+                document.getElementById('wr-height').value = Math.round(b.h * 2);
+            }
+            panel.classList.add('visible');
+        }
+
+        async function applyWorldResize() {
+            const w = parseInt(document.getElementById('wr-width').value);
+            const h = parseInt(document.getElementById('wr-height').value);
+            if (!w || !h || w < 1000 || h < 1000) {
+                showToast('Dimensiones mínimas: 1000');
+                return;
+            }
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ worldMapW: w / 2, worldMapH: h / 2 })
+                });
+                if (res.ok) {
+                    showToast(`Mundo redimensionado a ${w}x${h}`);
+                    document.getElementById('world-resize-panel').classList.remove('visible');
+                }
+            } catch (e) {
+                showToast('Error al redimensionar');
+            }
         }
 
         // ── ANIMATION LOOP ──
