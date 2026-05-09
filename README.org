@@ -1,0 +1,91 @@
+* sig-server
+
+A minimal hexagonal-architecture Agar.io-compatible game server implementing the Sigmally protocol.
+
+This is a complete rewrite of an OgarII fork, done with [[https://github.com/anthropics/claude-code][Claude Code]] (AI assistant).
+
+** Project Origins
+
+This project started as a fork of [[https://github.com/Luka967/OgarII][OgarII]] which implements
+[[https://sigmally.com][Sigmally]]'s custom protocol. The original codebase had grown complex over
+time (~35 source files, 6,000+ lines of server code plus native C addon and
+Go relay). This rewrite strips away unused features, adopts a clean hexagonal
+architecture, and cuts the codebase to ~2,500 lines of TypeScript with zero
+native dependencies.
+
+** Architecture
+
+The project follows a [[https://alistair.cockburn.us/hexagonal-architecture/][hexagonal (ports & adapters)]] architecture:
+
+#+begin_src
+  src/
+  ├── index.ts          (bootstrap — wires domain to adapters)
+  ├── domain/           (pure game logic — no I/O)
+  │   ├── types.ts      (shared types, Settings, constants)
+  │   ├── Game.ts       (aggregate root, tick loop)
+  │   ├── World.ts      (physics, spawning, cell management)
+  │   ├── Player.ts     (player state, view area)
+  │   ├── Cell.ts       (all cell types: PlayerCell, Pellet, Virus, Mothercell, EjectedCell)
+  │   ├── FFA.ts        (FFA game mode)
+  │   ├── Bot.ts        (influence-map AI)
+  │   └── BitGrid.ts    (pure JS spatial hash)
+  ├── ports/            (interfaces the domain uses)
+  │   └── ports.ts      (IProtocol, ILogger interfaces)
+  └── adapters/         (I/O implementations)
+      ├── sigmally.ts   (Sigmally binary protocol)
+      ├── socket.ts     (WebSocket server)
+      ├── cli.ts        (terminal commands)
+      ├── admin.ts      (Express web dashboard)
+      └── logger.ts     (console + file logging)
+#+end_src
+
+** What was removed
+
+- Legacy/Modern agar.io protocols (Sigmally-only fork)
+- Teams and Last Man Standing game modes (FFA only)
+- Minion bots
+- QuadTree spatial index (BitGrid only)
+- Native C addon (pure JS BitGrid instead of node-gyp + C)
+- Matchmaker, ChatChannel classes (inlined)
+- Router abstraction (merged into Player)
+- CommandList framework (~30 commands reduced to ~15 essentials)
+- Go WebSocket relay, client userscripts (separate projects)
+- ~21,000 lines of non-server code removed
+
+** What was kept
+
+- Sigmally protocol with 256-byte shuffle
+- FFA game mode with score leaderboard
+- All cell types (PlayerCell, Pellet, Virus, Mothercell, EjectedCell)
+- Full physics (movement, eating, collision, decay, autosplit, virus feeding)
+- Influence-map PlayerBot AI
+- Clan/Sub support
+- Web admin dashboard on port 5000
+- IP banning, connection limits, server password
+- Unix socket bridge for admin ↔ server communication
+
+** Running
+
+#+begin_src bash
+  pnpm install
+  npm run dev       # development (tsx)
+  # or
+  npm run build && npm start   # production (compiled JS)
+#+end_src
+
+The server listens on port 3000 (WebSocket) and port 5000 (admin dashboard).
+
+** Connecting
+
+Use Sigmally Fixes (Tampermonkey script) or any client that supports the
+Sigmally protocol. Point it to ~ws://<your-ip>:3000~.
+
+** Stats
+
+| Metric     | Before   | After    |
+|------------+----------+----------|
+| Source     | 35+ .js  | 15 .ts   |
+| Lines      | ~6,000   | ~2,500   |
+| C addon    | 600+     | 0        |
+| Deps       | 7        | 5        |
+| Build      | node-gyp | tsc only |
