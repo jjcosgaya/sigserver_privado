@@ -2,7 +2,7 @@
 
 A minimal hexagonal-architecture Agar.io-compatible game server implementing the Sigmally protocol.
 
-This is a complete rewrite of an OgarII fork, done with [[https://github.com/anthropics/claude-code][Claude Code]] (AI assistant).
+This is a complete rewrite of an OgarII fork, done with [[https://github.com/anomalyco/opencode][opencode]] and DeepSeek V4 Flash.
 
 ** Project Origins
 
