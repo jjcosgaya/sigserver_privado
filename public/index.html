@@ -1,0 +1,2628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sigmally Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:       #0d0e12;
+            --surface:  #13151b;
+            --surface2: #181a22;
+            --border:   #1e2130;
+            --border2:  #262a3a;
+            --accent:   #f0a500;
+            --accent2:  #d48f00;
+            --text:     #c8ccd8;
+            --muted:    #555c72;
+            --success:  #3ecf8e;
+            --danger:   #e05252;
+            --purple:   #8b5cf6;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        /* ── HEADER ── */
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border2);
+            padding: 0 20px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0.4;
+        }
+
+        .logo-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: #0d0e12;
+            stroke-width: 2.5;
+        }
+
+        .logo-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .logo-badge {
+            font-size: 10px;
+            background: var(--border2);
+            color: var(--muted);
+            border-radius: 2px;
+            padding: 2px 7px;
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 0.06em;
+            margin-left: 4px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        #status-msg {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            padding: 4px 10px;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+
+        .status-ok  { color: var(--success); background: rgba(62,207,142,0.08); border: 1px solid rgba(62,207,142,0.2); }
+        .status-busy{ color: var(--accent);  background: rgba(240,165,0,0.08);  border: 1px solid rgba(240,165,0,0.2);  }
+
+        /* ── VIEW TABS ── */
+        .view-tabs {
+            display: flex;
+            gap: 2px;
+            padding: 2px;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 5;
+        }
+
+        .view-tab {
+            padding: 6px 18px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            background: transparent;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.15s;
+            border-radius: 2px 2px 0 0;
+        }
+
+        .view-tab:hover { color: var(--text); background: var(--surface); }
+        .view-tab.active { color: var(--accent); background: var(--surface); }
+        .view-tab.active::after {
+            content: '';
+            display: block;
+            height: 2px;
+            background: var(--accent);
+            margin-top: 4px;
+            border-radius: 1px;
+        }
+
+        /* ── LAYOUT ── */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .view-content {
+            display: none;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .view-content.active {
+            display: flex;
+        }
+
+        .top-section {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── MAP LAYOUT ── */
+        .map-layout {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .map-sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            border-right: 1px solid var(--border2);
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .map-sidebar .panel-header {
+            padding: 10px 14px 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .map-sidebar .panel-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .sidebar-resize-handle {
+            width: 4px;
+            flex-shrink: 0;
+            cursor: col-resize;
+            background: var(--border);
+            transition: background 0.15s;
+            position: relative;
+            z-index: 3;
+        }
+
+        .sidebar-resize-handle:hover,
+        .sidebar-resize-handle.active { background: var(--accent); }
+
+        .map-resize-handle {
+            height: 4px;
+            flex-shrink: 0;
+            cursor: row-resize;
+            background: var(--border);
+            transition: background 0.15s;
+            position: relative;
+            z-index: 3;
+        }
+
+        .map-resize-handle:hover,
+        .map-resize-handle.active { background: var(--accent); }
+
+        .player-search {
+            margin: 8px 12px;
+            padding: 7px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .player-search:focus { border-color: rgba(240,165,0,0.4); }
+        .player-search::placeholder { color: var(--muted); }
+
+        .player-list-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 4px 8px;
+        }
+
+        .map-player-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: border-color 0.15s;
+        }
+
+        .map-player-row:hover { border-color: var(--border2); }
+        .map-player-row .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .map-player-row .pname {
+            font-size: 12px;
+            font-weight: 600;
+            color: #e0e3ec;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .map-player-row .pscore {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .map-player-row .pactions {
+            display: flex;
+            gap: 3px;
+            flex-shrink: 0;
+        }
+
+        .map-player-row .pactions button {
+            padding: 3px 7px;
+            font-size: 8px;
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: filter 0.15s;
+        }
+
+        .map-player-row .pactions button:hover { filter: brightness(1.2); }
+
+        .btn-pkill { background: var(--danger); color: #fff; }
+        .btn-pmerge { background: var(--purple); color: #fff; }
+        .btn-pcenter { background: var(--border2); color: var(--text); padding: 3px 6px; font-size: 10px; }
+
+        /* ── SIDEBAR PLAYER POPUP ── */
+        .player-action-popup {
+            display: none;
+            flex-shrink: 0;
+            padding: 10px 12px;
+            background: var(--surface2);
+            border-top: 1px solid var(--border2);
+        }
+
+        .player-action-popup.visible { display: block; }
+
+        .player-action-popup .pap-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            color: #e0e3ec;
+            margin-bottom: 8px;
+        }
+
+        .player-action-popup .pap-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .player-action-popup .pap-row label {
+            font-size: 11px;
+            color: var(--muted);
+            flex-shrink: 0;
+            width: 40px;
+        }
+
+        .player-action-popup .pap-row input {
+            flex: 1;
+            padding: 5px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            outline: none;
+            min-width: 0;
+        }
+
+        .player-action-popup .pap-row input:focus { border-color: rgba(240,165,0,0.4); }
+
+        .player-action-popup .pap-row .pap-apply {
+            padding: 5px 8px;
+            background: var(--success);
+            color: #0a1a12;
+            border: none;
+            border-radius: 2px;
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .player-action-popup .pap-btns {
+            display: flex;
+            gap: 4px;
+        }
+
+        .player-action-popup .pap-btns button {
+            flex: 1;
+            padding: 5px 4px;
+            border: none;
+            border-radius: 2px;
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: filter 0.15s;
+        }
+
+        .player-action-popup .pap-btns button:hover { filter: brightness(1.2); }
+
+        .pap-kill   { background: var(--danger); color: #fff; }
+        .pap-merge  { background: var(--purple); color: #fff; }
+        .pap-center { background: var(--border2); color: var(--text); }
+
+        /* ── MAP CONTAINER ── */
+        .map-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #0a0b0f;
+        }
+
+        #game-map {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        #game-map:active { cursor: grabbing; }
+
+        /* ── MAP CONTROLS ── */
+        .map-controls {
+            position: absolute;
+            bottom: 12px;
+            right: 16px;
+            display: flex;
+            flex-direction: row;
+            gap: 4px;
+            z-index: 2;
+        }
+
+        .map-controls button {
+            width: 32px;
+            height: 28px;
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            color: var(--text);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .map-controls button:hover { background: var(--surface2); }
+
+        /* ── MINIMAP ── */
+        .minimap {
+            position: absolute;
+            bottom: 60px;
+            right: 16px;
+            width: 140px;
+            height: 140px;
+            background: rgba(7,8,9,0.85);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        /* ── LEADERBOARD ── */
+        .leaderboard {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(7,8,9,0.8);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            padding: 10px 14px;
+            min-width: 150px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .leaderboard-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+        }
+
+        .lb-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 0;
+            font-size: 11px;
+        }
+
+        .lb-rank { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 10px; width: 16px; text-align: right; }
+        .lb-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+        .lb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e0e3ec; }
+        .lb-score { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--accent); }
+
+        /* ── STATS HUD ── */
+        .stats-hud {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(7,8,9,0.7);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            padding: 8px 12px;
+            z-index: 2;
+            pointer-events: none;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            line-height: 1.6;
+            color: var(--muted);
+        }
+
+        .stats-hud span { color: var(--text); }
+
+        /* ── WORLD RESET ── */
+        .world-reset-btn {
+            position: absolute;
+            top: 12px;
+            left: 160px;
+            background: rgba(7,8,9,0.7);
+            border: 1px solid var(--border2);
+            color: var(--muted);
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 3px;
+            cursor: pointer;
+            z-index: 2;
+            font-family: 'Space Mono', monospace;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .world-reset-btn:hover { color: var(--text); border-color: var(--accent); }
+
+        .world-resize-panel .wr-apply {
+            width: 100%;
+            padding: 6px 0;
+            background: var(--accent);
+            color: #0d0e12;
+            border: none;
+            border-radius: 3px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: filter 0.15s;
+        }
+
+        .world-resize-panel .wr-apply:hover { filter: brightness(1.15); }
+
+        /* ── CONTEXT POPUP ── */
+        .context-popup {
+            display: none;
+            position: absolute;
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 4px;
+            padding: 14px 16px;
+            z-index: 20;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            animation: fadeUp 0.15s ease;
+        }
+
+        .context-popup.visible { display: block; }
+
+        .context-popup .cptitle {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: #e0e3ec;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .context-popup .cprow {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .context-popup .cprow label {
+            font-size: 11px;
+            color: var(--muted);
+            flex-shrink: 0;
+            width: 50px;
+        }
+
+        .context-popup .cprow input {
+            flex: 1;
+            padding: 5px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            outline: none;
+        }
+
+        .context-popup .cprow input:focus { border-color: rgba(240,165,0,0.4); }
+
+        .context-popup .cpbtns {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .context-popup .cpbtns button {
+            padding: 5px 10px;
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: filter 0.15s;
+        }
+
+        .context-popup .cpbtns button:hover { filter: brightness(1.2); }
+
+        .cpbtn-apply { background: var(--success); color: #0a1a12; }
+        .cpbtn-kill   { background: var(--danger); color: #fff; }
+        .cpbtn-merge  { background: var(--purple); color: #fff; }
+        .cpbtn-close  { background: var(--border2); color: var(--text); }
+
+        /* ── TOOLTIP ── */
+        .map-tooltip {
+            display: none;
+            position: absolute;
+            background: rgba(7,8,9,0.9);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            padding: 6px 10px;
+            font-size: 11px;
+            line-height: 1.5;
+            z-index: 15;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .map-tooltip.visible { display: block; }
+        .map-tooltip .ttname { color: #e0e3ec; font-weight: 600; }
+        .map-tooltip .ttdetail { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 10px; }
+
+        /* ── SETTINGS VIEW ── */
+        .left-panel {
+            width: 280px;
+            flex-shrink: 0;
+            border-right: 1px solid var(--border2);
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 14px 16px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .panel-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .template-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 12px;
+            margin-bottom: 8px;
+            transition: border-color 0.2s;
+        }
+
+        .template-card:hover { border-color: var(--border2); }
+
+        .template-card h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #e0e3ec;
+            margin-bottom: 4px;
+        }
+
+        .template-card p {
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 12px;
+            overflow: hidden;
+        }
+
+        #json-editor {
+            flex: 1;
+            background: #0a0b0f;
+            color: #a8b0c8;
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            padding: 14px;
+            font-family: 'Space Mono', monospace;
+            font-size: 12.5px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #json-editor:focus { border-color: rgba(240,165,0,0.4); }
+
+        .editor-toolbar {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        /* ── TERMINAL ── */
+        .terminal-section {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            padding: 8px 16px 10px;
+            overflow: hidden;
+            border-top: none;
+            min-height: 80px;
+        }
+
+        .terminal-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+
+        .terminal-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .terminal-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #070809;
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+        }
+
+        #terminal {
+            flex: 1;
+            color: #7aef9a;
+            font-family: 'Space Mono', monospace;
+            font-size: 11.5px;
+            padding: 8px 12px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        .cmd-row {
+            display: flex;
+            align-items: center;
+            background: #0a0c0e;
+            border-top: 1px solid var(--border);
+            padding: 5px 12px;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .cmd-prompt {
+            color: var(--accent);
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        #command-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            outline: none;
+            padding: 3px 0;
+        }
+
+        #command-input::placeholder { color: var(--muted); font-size: 11px; }
+
+        /* ── BUTTONS ── */
+        button {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 7px 13px;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            transition: filter 0.15s, transform 0.1s;
+        }
+
+        button:hover  { filter: brightness(1.15); }
+        button:active { transform: scale(0.97); }
+
+        .btn-apply   { background: var(--success); color: #0a1a12; }
+        .btn-refresh { background: var(--border2); color: var(--text); }
+        .btn-save-tpl{ background: var(--purple);  color: #fff; }
+        .btn-logout  { background: transparent; color: var(--muted); border: 1px solid var(--border2); }
+        .btn-logout:hover { color: var(--danger); border-color: var(--danger); filter: none; }
+        .btn-load    { background: var(--border2); color: var(--text); }
+        .btn-del     { background: transparent; color: var(--danger); border: 1px solid rgba(224,82,82,0.3); padding: 6px 10px; }
+        .btn-del:hover { background: rgba(224,82,82,0.1); filter: none; }
+        .btn-mass    { background: var(--accent); color: #0d0e12; }
+
+        /* ── MODALS ── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(7,8,9,0.85);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.active { display: flex; }
+
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 4px;
+            width: 420px;
+            padding: 28px;
+            position: relative;
+            animation: fadeUp 0.2s ease;
+        }
+
+        .modal-box.wide { width: 520px; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            border-radius: 4px 4px 0 0;
+        }
+
+        .modal-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #e0e3ec;
+            margin-bottom: 20px;
+        }
+
+        .modal-box input,
+        .modal-box textarea {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .modal-box input:focus,
+        .modal-box textarea:focus { border-color: rgba(240,165,0,0.4); }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed;
+            bottom: 240px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 3px;
+            padding: 8px 16px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--success);
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .toast.visible { opacity: 1; }
+
+        /* ── NO PLAYERS MSG ── */
+        .no-players-msg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--muted);
+            font-size: 13px;
+            font-family: 'DM Sans', sans-serif;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="logo-row">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            </div>
+            <span class="logo-text">Sigmally</span>
+            <span class="logo-badge">Console</span>
+        </div>
+        <div class="header-right">
+            <span id="status-msg"></span>
+            <a href="/logout"><button class="btn-logout">Cerrar sesión</button></a>
+        </div>
+    </header>
+
+    <!-- VIEW TABS -->
+    <div class="view-tabs">
+        <button class="view-tab active" data-view="settings" onclick="switchView('settings')">⚙ Configuración</button>
+        <button class="view-tab" data-view="map" onclick="switchView('map')">🗺 Mapa</button>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <!-- SETTINGS VIEW -->
+        <div class="view-content active" id="view-settings">
+            <div class="top-section">
+                <div class="left-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">Templates</span>
+                        <button class="btn-save-tpl" style="padding:4px 10px;font-size:9px;" onclick="showSaveModal()">+ Guardar</button>
+                    </div>
+                    <div class="panel-body" id="templates-list">
+                        <div style="color:var(--muted);font-size:12px;padding:8px 4px;">Sin templates guardados.</div>
+                    </div>
+                </div>
+                <div class="sidebar-resize-handle" id="config-resize-handle"></div>
+                <div class="editor-container">
+                    <div class="panel-header" style="padding:0 0 10px;border:none;">
+                        <span class="panel-title">Configuración del Servidor</span>
+                    </div>
+                    <textarea id="json-editor" spellcheck="false"></textarea>
+                    <div class="editor-toolbar">
+                        <button class="btn-apply"    onclick="applySettings()">✓ Aplicar al servidor</button>
+                        <button class="btn-refresh"  onclick="loadSettings()">↺ Recargar JSON</button>
+                        <button class="btn-save-tpl" onclick="showSaveModal()">⊕ Guardar template</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAP VIEW -->
+        <div class="view-content" id="view-map">
+            <div class="top-section">
+                <div class="map-sidebar" id="map-sidebar">
+                    <div class="panel-header">
+                        <span class="panel-title">Jugadores</span>
+                        <span id="player-count-badge" style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);">0</span>
+                    </div>
+                    <input class="player-search" id="player-search" type="text" placeholder="Buscar jugador..." oninput="renderPlayerList()">
+                    <div class="player-list-scroll" id="player-list"></div>
+                    <div class="player-action-popup" id="player-action-popup">
+                        <div class="pap-title" id="pap-title"></div>
+                        <div class="pap-row">
+                            <label>Masa</label>
+                            <input type="number" id="pap-mass" value="" min="0" step="100">
+                            <button class="pap-apply" onclick="applySidebarMass()">OK</button>
+                        </div>
+                        <div class="pap-btns">
+                            <button class="pap-kill" onclick="applySidebarKill()">Matar</button>
+                            <button class="pap-merge" onclick="applySidebarMerge()">Fusionar</button>
+                            <button class="pap-center" onclick="applySidebarCenter()">Centrar</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
+                <div class="map-container" id="map-container">
+                    <canvas id="game-map"></canvas>
+                    <div class="map-controls">
+                        <button onclick="zoomIn()" title="Acercar">+</button>
+                        <button onclick="zoomOut()" title="Alejar">−</button>
+                        <button onclick="resetView()" title="Resetear vista">⟲</button>
+                    </div>
+                    <canvas class="minimap" id="minimap" width="140" height="140"></canvas>
+                    <div class="leaderboard" id="leaderboard"></div>
+                    <div class="stats-hud" id="stats-hud"></div>
+                    <button class="world-reset-btn" id="world-reset-btn" onclick="resetWorldSize()" title="Restablecer tamaño del mundo">⟲ Default</button>
+                    <div class="context-popup" id="context-popup"></div>
+                    <div class="map-tooltip" id="map-tooltip"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-resize-handle" id="map-resize-handle"></div>
+
+        <!-- TERMINAL -->
+        <div class="terminal-section">
+            <div class="terminal-bar">
+                <div class="terminal-label">
+                    <span class="live-dot"></span>
+                    Logs en tiempo real
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <button class="btn-mass" style="padding:4px 12px;" onclick="showMassModal()">⊕ Gestionar masas</button>
+                </div>
+            </div>
+            <div class="terminal-wrapper">
+                <div id="terminal">Conectando con logs...</div>
+                <div class="cmd-row">
+                    <span class="cmd-prompt">›</span>
+                    <input type="text" id="command-input" placeholder="Escribe un comando (players, mass 1 1000, addbot 0 10...)" autocomplete="off">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- MODAL: Guardar Template -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-box">
+            <div class="modal-title">Guardar Template</div>
+            <input type="text" id="tpl-id"   placeholder="ID del archivo (ej: modo_guerra)">
+            <input type="text" id="tpl-name" placeholder="Nombre visible (ej: Configuración de Guerra)">
+            <textarea id="tpl-desc" placeholder="Descripción de este modo..." rows="3"></textarea>
+            <div class="modal-footer">
+                <button class="btn-refresh" onclick="closeModal()">Cancelar</button>
+                <button class="btn-apply"   onclick="saveTemplate()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Gestionar Masas -->
+    <div class="modal-overlay" id="mass-modal">
+        <div class="modal-box wide">
+            <div class="modal-title">Gestionar Masas de Jugadores</div>
+            <div style="margin-bottom:12px;">
+                <button class="btn-refresh" onclick="loadPlayersForMass()" style="width:100%;">↺ Refrescar jugadores</button>
+            </div>
+            <div class="mass-list-container" id="mass-list">
+                <p style="color:var(--muted);font-size:12px;">Pulsa "Refrescar jugadores" para cargar la lista...</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-refresh" onclick="closeMassModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Tab View Switching ──
+        function switchView(view) {
+            document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
+            document.querySelectorAll('.view-content').forEach(c => c.classList.toggle('active', c.id === 'view-' + view));
+            if (view === 'map') {
+                setTimeout(() => {
+                    resizeCanvas();
+                    if (mapData) { autoFitCamera(); render(); }
+                    else render();
+                }, 50);
+            }
+        }
+
+        // ── Settings ──
+        async function loadSettings() {
+            const res = await fetch('/api/settings');
+            if (res.status === 401) { window.location.href = '/login.html'; return; }
+            const settings = await res.json();
+            document.getElementById('json-editor').value = JSON.stringify(settings, null, 4);
+        }
+
+        async function applySettings() {
+            const editor = document.getElementById('json-editor');
+            const status = document.getElementById('status-msg');
+            try {
+                const settings = JSON.parse(editor.value);
+                status.className = 'status-busy';
+                status.innerText = '⟳  Sincronizando...';
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                if (res.ok) {
+                    status.className = 'status-ok';
+                    status.innerText = '✓  Sincronizado';
+                    setTimeout(() => { status.innerText = ''; status.className = ''; }, 3000);
+                }
+            } catch (e) {
+                alert('Error en el JSON: ' + e.message);
+            }
+        }
+
+        // ── Templates ──
+        async function loadTemplates() {
+            const res = await fetch('/api/templates');
+            const templates = await res.json();
+            const list = document.getElementById('templates-list');
+            if (!templates.length) {
+                list.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:4px;">Sin templates guardados.</div>';
+                return;
+            }
+            list.innerHTML = templates.map(t => `
+                <div class="template-card">
+                    <h3>${t.name}</h3>
+                    <p>${t.desc}</p>
+                    <div class="template-actions">
+                        <button class="btn-load" onclick="loadTemplateIntoEditor('${t.id}')">Editar</button>
+                        <button class="btn-apply" onclick="applyTemplate('${t.id}')">Usar</button>
+                        <button class="btn-del" onclick="deleteTemplate('${t.id}')">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadTemplateIntoEditor(id) {
+            const res = await fetch('/api/templates/' + id);
+            const data = await res.json();
+            delete data._template_name;
+            delete data._template_desc;
+            document.getElementById('json-editor').value = JSON.stringify(data, null, 4);
+        }
+
+        async function applyTemplate(id) {
+            if (!confirm('¿Aplicar este template al servidor ahora mismo?')) return;
+            const res = await fetch('/api/templates/' + id);
+            const data = await res.json();
+            document.getElementById('json-editor').value = JSON.stringify(data, null, 4);
+            applySettings();
+        }
+
+        async function deleteTemplate(id) {
+            if (!confirm('¿Borrar template?')) return;
+            await fetch('/api/templates/' + id, { method: 'DELETE' });
+            loadTemplates();
+        }
+
+        function showSaveModal() { document.getElementById('modal').classList.add('active'); }
+        function closeModal()    { document.getElementById('modal').classList.remove('active'); }
+
+        async function saveTemplate() {
+            const id       = document.getElementById('tpl-id').value;
+            const name     = document.getElementById('tpl-name').value;
+            const desc     = document.getElementById('tpl-desc').value;
+            const settings = JSON.parse(document.getElementById('json-editor').value);
+            if (!id) return alert('ID requerido');
+            const res = await fetch('/api/templates/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, name, desc, settings })
+            });
+            if (res.ok) { closeModal(); loadTemplates(); }
+        }
+
+        // ── Terminal & Commands ──
+        let commandHistory = [], historyIndex = -1;
+        const cmdInput = document.getElementById('command-input');
+
+        cmdInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    cmdInput.value = commandHistory[commandHistory.length - 1 - historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) { historyIndex--; cmdInput.value = commandHistory[commandHistory.length - 1 - historyIndex]; }
+                else { historyIndex = -1; cmdInput.value = ''; }
+            } else if (e.key === 'Enter' && cmdInput.value.trim()) {
+                const command = cmdInput.value.trim();
+                cmdInput.value = '';
+                commandHistory.push(command);
+                historyIndex = -1;
+                try {
+                    await fetch('/api/command', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command })
+                    });
+                } catch (err) { console.error(err); }
+            }
+        });
+
+        function updateLogs() {
+            fetch('/api/logs').then(r => r.text()).then(t => {
+                const term = document.getElementById('terminal');
+                const atBottom = term.scrollHeight - term.clientHeight <= term.scrollTop + 50;
+                term.innerText = t;
+                if (atBottom) term.scrollTop = term.scrollHeight;
+            }).catch(() => {});
+        }
+
+        // ── Mass Modal ──
+        function showMassModal()  { document.getElementById('mass-modal').classList.add('active'); loadPlayersForMass(); }
+        function closeMassModal() { document.getElementById('mass-modal').classList.remove('active'); }
+
+        function getDynamicStep(v) {
+            if (v >= 500000) return 100000;
+            if (v >= 100000) return 25000;
+            if (v >= 50000)  return 10000;
+            if (v >= 10000)  return 5000;
+            if (v >= 5000)   return 1000;
+            if (v >= 1000)   return 500;
+            if (v >= 500)    return 100;
+            return 50;
+        }
+
+        function setupMassInput(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            el.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const cur = parseFloat(el.value) || 0;
+                const step = getDynamicStep(cur);
+                el.value = Math.max(0, Math.round(e.deltaY < 0 ? cur + step : cur - step));
+            });
+            el.addEventListener('keydown', (e) => {
+                if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+                e.preventDefault();
+                const cur = parseFloat(el.value) || 0;
+                let step = getDynamicStep(cur);
+                if (e.shiftKey) step *= 10;
+                el.value = Math.max(0, Math.round(e.key === 'ArrowUp' ? cur + step : cur - step));
+            });
+        }
+
+        async function loadPlayersForMass() {
+            const list = document.getElementById('mass-list');
+            list.innerHTML = '<p style="color:var(--muted);font-size:12px;">Cargando jugadores...</p>';
+            try {
+                const res     = await fetch('/api/players', { method: 'POST' });
+                const players = await res.json();
+                if (!players.length) {
+                    list.innerHTML = '<p style="color:var(--muted);font-size:12px;">No se encontraron jugadores conectados.</p>';
+                    return;
+                }
+                list.innerHTML = players.map(p => `
+                    <div class="player-row">
+                        <div class="player-info">
+                            <div class="player-name">${p.name}</div>
+                            <div class="player-meta">
+                                <span class="player-id">ID: ${p.id}</span>
+                                <span class="player-score">Score: ${p.score}</span>
+                            </div>
+                        </div>
+                        <div class="player-input-group">
+                            <input type="number" id="mass-input-${p.id}" placeholder="Masa" min="0" step="100">
+                            <button class="btn-mass-sm" onclick="setPlayerMass(${p.id})">Aplicar</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                players.forEach(p => {
+                    const inp = document.getElementById(`mass-input-${p.id}`);
+                    inp.addEventListener('wheel', (e) => {
+                        e.preventDefault();
+                        const cur = parseFloat(inp.value) || 0, step = getDynamicStep(cur);
+                        inp.value = Math.max(0, Math.round(e.deltaY < 0 ? cur + step : cur - step));
+                    });
+                    inp.addEventListener('keydown', (e) => {
+                        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+                        e.preventDefault();
+                        const cur = parseFloat(inp.value) || 0;
+                        let step = getDynamicStep(cur);
+                        if (e.shiftKey) step *= 10;
+                        inp.value = Math.max(0, Math.round(e.key === 'ArrowUp' ? cur + step : cur - step));
+                    });
+                });
+            } catch {
+                list.innerHTML = '<p style="color:var(--danger);font-size:12px;">Error al cargar jugadores.</p>';
+            }
+        }
+
+        async function setPlayerMass(playerId) {
+            const inp  = document.getElementById(`mass-input-${playerId}`);
+            const mass = inp.value.trim();
+            if (!mass || isNaN(mass)) return;
+            try {
+                await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: `mass ${playerId} ${mass}` })
+                });
+                inp.style.borderColor = 'var(--success)';
+                setTimeout(() => inp.style.borderColor = '', 1000);
+            } catch {
+                inp.style.borderColor = 'var(--danger)';
+                setTimeout(() => inp.style.borderColor = '', 1000);
+            }
+        }
+
+        // ── MAP STATE ──
+        const canvas = document.getElementById('game-map');
+        const ctx = canvas.getContext('2d');
+        const miniCanvas = document.getElementById('minimap');
+        const miniCtx = miniCanvas.getContext('2d');
+
+        let mapData = null;
+        let camera = { x: 0, y: 0, zoom: 0.5 };
+        let animating = false;
+        let hoveredPlayer = null;
+        let hoveredCell = null;
+        let selectedPlayerForPopup = null;
+
+        // Drag state
+        let drag = {
+            active: false,
+            type: null,
+            playerId: null,
+            cellId: null,
+            startX: 0,
+            startY: 0,
+            camStartX: 0,
+            camStartY: 0,
+            cellOrigX: 0,
+            cellOrigY: 0,
+            wasDrag: false
+        };
+
+        // Border state for edge-drag resizing
+        let localBorder = null;
+        let hoveredBorderEdge = null;
+
+        // ── HELPERS ──
+        function worldToScreen(wx, wy) {
+            return {
+                x: (wx - camera.x) * camera.zoom + canvas.width / 2,
+                y: (wy - camera.y) * camera.zoom + canvas.height / 2
+            };
+        }
+
+        function screenToWorld(sx, sy) {
+            return {
+                x: (sx - canvas.width / 2) / camera.zoom + camera.x,
+                y: (sy - canvas.height / 2) / camera.zoom + camera.y
+            };
+        }
+
+        function findBorderEdge(sx, sy, border) {
+            const threshold = 8;
+            const leftX = worldToScreen(border.x - border.w, border.y).x;
+            const rightX = worldToScreen(border.x + border.w, border.y).x;
+            const topY = worldToScreen(border.x, border.y - border.h).y;
+            const bottomY = worldToScreen(border.x, border.y + border.h).y;
+            const l = Math.min(leftX, rightX), r = Math.max(leftX, rightX);
+            const t = Math.min(topY, bottomY), b = Math.max(topY, bottomY);
+            const onLeft = Math.abs(sx - l) < threshold && sy >= t && sy <= b;
+            const onRight = Math.abs(sx - r) < threshold && sy >= t && sy <= b;
+            const onTop = Math.abs(sy - t) < threshold && sx >= l && sx <= r;
+            const onBottom = Math.abs(sy - b) < threshold && sx >= l && sx <= r;
+            if (onTop && onLeft) return 'top-left';
+            if (onTop && onRight) return 'top-right';
+            if (onBottom && onLeft) return 'bottom-left';
+            if (onBottom && onRight) return 'bottom-right';
+            if (onLeft) return 'left';
+            if (onRight) return 'right';
+            if (onTop) return 'top';
+            if (onBottom) return 'bottom';
+            return null;
+        }
+
+        function colorIntToHex(c) {
+            if (c == null || isNaN(c)) return '#7F7F7F';
+            return '#' + ('000000' + (c >>> 0).toString(16)).slice(-6);
+        }
+
+        function colorIntToRgba(c, a) {
+            if (c == null || isNaN(c)) return `rgba(127,127,127,${a})`;
+            return `rgba(${(c >> 16) & 255},${(c >> 8) & 255},${c & 255},${a})`;
+        }
+
+        // ── RESIZE ──
+        function resizeCanvas() {
+            const rect = document.getElementById('map-container').getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // ── VIEW CONTROLS ──
+        function zoomIn() {
+            camera.zoom = Math.min(camera.zoom * 1.5, 20);
+            render();
+        }
+
+        function zoomOut() {
+            camera.zoom = Math.max(camera.zoom / 1.5, 0.01);
+            render();
+        }
+
+        function resetView() {
+            autoFitCamera();
+            render();
+        }
+
+        function autoFitCamera() {
+            if (!canvas.width || !canvas.height) return;
+            if (!mapData || !mapData.worlds || !mapData.worlds[0]) {
+                const world = mapData && mapData.worlds && mapData.worlds[0];
+                if (world) {
+                    const b = world.border;
+                    camera.x = b.x;
+                    camera.y = b.y;
+                    const worldSize = Math.max(b.w, b.h) * 2;
+                    camera.zoom = Math.min(canvas.width, canvas.height) / worldSize * 0.9;
+                }
+                return;
+            }
+            const world = mapData.worlds[0];
+            const b = world.border;
+            const players = world.players;
+
+            if (players.length === 0) {
+                camera.x = b.x;
+                camera.y = b.y;
+                const worldSize = Math.max(b.w, b.h) * 2;
+                camera.zoom = Math.min(canvas.width, canvas.height) / worldSize * 0.9;
+                return;
+            }
+
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (const p of players) {
+                for (const c of p.cells) {
+                    minX = Math.min(minX, c.x - c.size);
+                    maxX = Math.max(maxX, c.x + c.size);
+                    minY = Math.min(minY, c.y - c.size);
+                    maxY = Math.max(maxY, c.y + c.size);
+                }
+            }
+            const cx = (minX + maxX) / 2;
+            const cy = (minY + maxY) / 2;
+            const w = (maxX - minX) || 1000;
+            const h = (maxY - minY) || 1000;
+            const zoomX = canvas.width / (w * 1.3);
+            const zoomY = canvas.height / (h * 1.3);
+            camera.x = cx;
+            camera.y = cy;
+            camera.zoom = Math.min(zoomX, zoomY, 2);
+        }
+
+        // ── FETCH MAP DATA ──
+        let mapDataError = false;
+        let initialLoad = true;
+
+        async function fetchMapData() {
+            if (drag.active) return;
+            try {
+                const res = await fetch('/api/map-data', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.worlds) {
+                        mapData = data;
+                        mapDataError = false;
+                        const world = data.worlds[0];
+                        if (world) {
+                            document.getElementById('player-count-badge').textContent = world.players ? world.players.length : 0;
+                        }
+                        renderPlayerList();
+                        const mapVisible = document.getElementById('view-map').classList.contains('active');
+                        if (initialLoad) {
+                            initialLoad = false;
+                            if (mapVisible) {
+                                resizeCanvas();
+                                autoFitCamera();
+                            }
+                        }
+                        if (mapVisible) render();
+                    }
+                }
+            } catch (e) {
+                if (!mapDataError) {
+                    mapDataError = true;
+                }
+            }
+        }
+
+        // ── RENDER PLAYER LIST ──
+        function renderPlayerList() {
+            const list = document.getElementById('player-list');
+            const search = document.getElementById('player-search').value.toLowerCase().trim();
+            if (!mapData || !mapData.worlds || !mapData.worlds[0] || !mapData.worlds[0].players) {
+                list.innerHTML = '<div class="no-players-msg">Sin jugadores</div>';
+                return;
+            }
+            const players = mapData.worlds[0].players;
+            let filtered = players;
+            if (search) {
+                filtered = players.filter(p => p.name.toLowerCase().includes(search));
+                filtered.sort((a, b) => a.name.toLowerCase().indexOf(search) - b.name.toLowerCase().indexOf(search));
+            } else {
+                filtered = [...players].sort((a, b) => b.score - a.score);
+            }
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="no-players-msg" style="padding:20px;font-size:11px;">Sin resultados</div>';
+                return;
+            }
+            let prevId = null;
+            list.innerHTML = filtered.map(p => {
+                const color = colorIntToHex(p.color);
+                prevId = p.id;
+                return `<div class="map-player-row" onclick="togglePlayerMenu(${p.id})" id="prow-${p.id}">
+                    <span class="color-dot" style="background:${color}"></span>
+                    <span class="pname">${escHtml(p.name)}</span>
+                    <span class="pscore">${p.score}</span>
+                    <div class="pactions">
+                        <button class="btn-pcenter" onclick="event.stopPropagation();centerOnPlayer(${p.id})" title="Centrar">◎</button>
+                        <button class="btn-pkill" onclick="event.stopPropagation();quickKill(${p.id})" title="Matar">✕</button>
+                        <button class="btn-pmerge" onclick="event.stopPropagation();quickMerge(${p.id})" title="Fusionar">◉</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function escHtml(s) {
+            if (!s) return '';
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function centerOnPlayer(playerId) {
+            if (!mapData || !mapData.worlds[0]) return;
+            for (const p of mapData.worlds[0].players) {
+                if (p.id === playerId && p.cells.length > 0) {
+                    let cx = 0, cy = 0;
+                    for (const c of p.cells) { cx += c.x; cy += c.y; }
+                    cx /= p.cells.length;
+                    cy /= p.cells.length;
+                    camera.x = cx;
+                    camera.y = cy;
+                    render();
+                    return;
+                }
+            }
+        }
+
+        async function quickKill(playerId) {
+            await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `kill ${playerId}` })
+            });
+            showToast('Jugador ' + playerId + ' eliminado');
+        }
+
+        async function quickMerge(playerId) {
+            await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `merge ${playerId}` })
+            });
+            showToast('Jugador ' + playerId + ' fusionado');
+        }
+
+        // ── SIDEBAR PLAYER POPUP ──
+        let sidebarPlayerId = null;
+
+        function togglePlayerMenu(playerId) {
+            const popup = document.getElementById('player-action-popup');
+            if (sidebarPlayerId === playerId && popup.classList.contains('visible')) {
+                popup.classList.remove('visible');
+                sidebarPlayerId = null;
+                return;
+            }
+            sidebarPlayerId = playerId;
+            if (!mapData || !mapData.worlds[0]) return;
+            for (const p of mapData.worlds[0].players) {
+                if (p.id === playerId) {
+                    const color = colorIntToHex(p.color);
+                    document.getElementById('pap-title').innerHTML =
+                        `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;"></span>${escHtml(p.name)} (ID: ${p.id})`;
+                    const mass = Math.round(p.score) || 0;
+                    document.getElementById('pap-mass').value = mass;
+                    popup.classList.add('visible');
+                    setupMassInput('pap-mass');
+                    return;
+                }
+            }
+        }
+
+        function getSidebarPlayer() {
+            if (!sidebarPlayerId || !mapData || !mapData.worlds[0]) return null;
+            for (const p of mapData.worlds[0].players) {
+                if (p.id === sidebarPlayerId) return p;
+            }
+            return null;
+        }
+
+        async function applySidebarMass() {
+            const p = getSidebarPlayer();
+            if (!p) return;
+            const mass = document.getElementById('pap-mass').value;
+            if (!mass || isNaN(mass)) return;
+            await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `mass ${p.id} ${mass}` })
+            });
+            showToast('Masa cambiada a ' + mass);
+        }
+
+        async function applySidebarKill() {
+            const p = getSidebarPlayer();
+            if (!p) return;
+            await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `kill ${p.id}` })
+            });
+            showToast('Jugador eliminado');
+            document.getElementById('player-action-popup').classList.remove('visible');
+            sidebarPlayerId = null;
+        }
+
+        async function applySidebarMerge() {
+            const p = getSidebarPlayer();
+            if (!p) return;
+            await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `merge ${p.id}` })
+            });
+            showToast('Jugador fusionado');
+        }
+
+        function applySidebarCenter() {
+            const p = getSidebarPlayer();
+            if (!p) return;
+            centerOnPlayer(p.id);
+            switchView('map');
+        }
+
+        // ── TOAST ──
+        let toastTimeout = null;
+
+        function showToast(msg) {
+            const el = document.getElementById('toast');
+            el.textContent = msg;
+            el.classList.add('visible');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => el.classList.remove('visible'), 2000);
+        }
+
+        // ── CANVAS MOUSE EVENTS ──
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('mouseup', onMouseUp);
+        canvas.addEventListener('wheel', onWheel, { passive: false });
+        canvas.addEventListener('mouseleave', onMouseLeave);
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        function getCanvasPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        }
+
+        function findCellAt(sx, sy) {
+            const wpos = screenToWorld(sx, sy);
+            if (!mapData || !mapData.worlds[0]) return null;
+            // Search in reverse order (top-most drawn = last)
+            const players = mapData.worlds[0].players;
+            for (let i = players.length - 1; i >= 0; i--) {
+                const p = players[i];
+                for (let j = p.cells.length - 1; j >= 0; j--) {
+                    const c = p.cells[j];
+                    const dx = wpos.x - c.x;
+                    const dy = wpos.y - c.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const screenR = c.size * camera.zoom;
+                    if (dist <= c.size && screenR > 5) {
+                        return { player: p, cell: c, playerId: p.id, cellId: c.id };
+                    }
+                }
+            }
+            return null;
+        }
+
+        function onMouseDown(e) {
+            const pos = getCanvasPos(e);
+            closeContextPopup();
+
+            const hit = findCellAt(pos.x, pos.y);
+            if (hit) {
+                drag.active = true;
+                drag.type = e.shiftKey ? 'allcells' : 'cell';
+                drag.playerId = hit.player.id;
+                drag.cellId = hit.cell.id;
+                drag.startX = pos.x;
+                drag.startY = pos.y;
+                drag.cellOrigX = hit.cell.x;
+                drag.cellOrigY = hit.cell.y;
+                canvas.style.cursor = 'grabbing';
+                return;
+            }
+
+            // Border edge resize
+            if (mapData && mapData.worlds[0]) {
+                const edge = findBorderEdge(pos.x, pos.y, mapData.worlds[0].border);
+                if (edge) {
+            const b = localBorder || mapData.worlds[0].border;
+                    localBorder = { x: b.x, y: b.y, w: b.w, h: b.h };
+                    drag.active = true;
+                    drag.type = 'border-resize';
+                    drag.borderEdge = edge;
+                    drag.startX = pos.x;
+                    drag.startY = pos.y;
+                    return;
+                }
+            }
+
+            // Start pan
+            drag.active = true;
+            drag.type = 'pan';
+            drag.startX = pos.x;
+            drag.startY = pos.y;
+            drag.camStartX = camera.x;
+            drag.camStartY = camera.y;
+            canvas.style.cursor = 'grabbing';
+        }
+
+        function onMouseMove(e) {
+            const pos = getCanvasPos(e);
+
+            if (drag.active) {
+                const dx = pos.x - drag.startX;
+                const dy = pos.y - drag.startY;
+
+                if (drag.type === 'border-resize') {
+                    if (localBorder) {
+                        const mouseWorld = screenToWorld(pos.x, pos.y);
+                        if (drag.borderEdge.includes('left') || drag.borderEdge.includes('right')) {
+                            localBorder.w = Math.max(500, Math.abs(mouseWorld.x - localBorder.x));
+                        }
+                        if (drag.borderEdge.includes('top') || drag.borderEdge.includes('bottom')) {
+                            localBorder.h = Math.max(500, Math.abs(mouseWorld.y - localBorder.y));
+                        }
+                        render();
+                    }
+                    return;
+                } else if (drag.type === 'pan') {
+                    camera.x = drag.camStartX - dx / camera.zoom;
+                    camera.y = drag.camStartY - dy / camera.zoom;
+                    render();
+                } else if (drag.type === 'cell' || drag.type === 'allcells') {
+                    // Update local cell position for visual feedback
+                    const world = drag.type === 'allcells' ? screenToWorld(pos.x, pos.y) : screenToWorld(pos.x, pos.y);
+                    if (mapData && mapData.worlds[0]) {
+                        for (const p of mapData.worlds[0].players) {
+                            if (p.id === drag.playerId) {
+                                if (drag.type === 'allcells') {
+                                    const w = screenToWorld(pos.x, pos.y);
+                                    const dx2 = w.x - screenToWorld(drag.startX, drag.startY).x;
+                                    const dy2 = w.y - screenToWorld(drag.startX, drag.startY).y;
+                                    for (const c of p.cells) {
+                                        c._dragX = c.x + dx2;
+                                        c._dragY = c.y + dy2;
+                                    }
+                                } else {
+                                    const w = screenToWorld(pos.x, pos.y);
+                                    for (const c of p.cells) {
+                                        if (c.id === drag.cellId) {
+                                            c._dragX = w.x;
+                                            c._dragY = w.y;
+                                        } else {
+                                            c._dragX = undefined;
+                                            c._dragY = undefined;
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    render();
+                }
+                return;
+            }
+
+            // Hover
+            const hit = findCellAt(pos.x, pos.y);
+            if (hit) {
+                hoveredPlayer = hit.player;
+                hoveredCell = hit.cell;
+                canvas.style.cursor = 'pointer';
+                const tooltip = document.getElementById('map-tooltip');
+                const rect = canvas.getBoundingClientRect();
+                tooltip.innerHTML = `<div class="ttname">${escHtml(hit.player.name)}</div>
+                    <div class="ttdetail">ID: ${hit.player.id} · Score: ${hit.player.score}</div>
+                    <div class="ttdetail">Celda: ${hit.cell.id} · Masa: ${Math.round(hit.cell.size * hit.cell.size / 100)}</div>`;
+                tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
+                tooltip.style.top = (e.clientY - rect.top - 10) + 'px';
+                tooltip.classList.add('visible');
+                render();
+            } else {
+                if (hoveredPlayer) {
+                    hoveredPlayer = null;
+                    hoveredCell = null;
+                    document.getElementById('map-tooltip').classList.remove('visible');
+                    render();
+                }
+                // Check border edge hover
+                if (mapData && mapData.worlds[0]) {
+                    const edge = findBorderEdge(pos.x, pos.y, mapData.worlds[0].border);
+                    if (edge !== hoveredBorderEdge) {
+                        hoveredBorderEdge = edge;
+                        render();
+                    }
+                    if (edge) {
+                        if (edge === 'left' || edge === 'right') canvas.style.cursor = 'col-resize';
+                        else if (edge === 'top' || edge === 'bottom') canvas.style.cursor = 'row-resize';
+                        else canvas.style.cursor = 'nwse-resize';
+                        return;
+                    }
+                }
+                if (hoveredBorderEdge) {
+                    hoveredBorderEdge = null;
+                    render();
+                }
+                canvas.style.cursor = 'grab';
+            }
+        }
+
+        function onMouseUp(e) {
+            const pos = getCanvasPos(e);
+            if (drag.active && (drag.type === 'cell' || drag.type === 'allcells')) {
+                const wpos = screenToWorld(pos.x, pos.y);
+                const isDrag = Math.abs(pos.x - drag.startX) > 5 || Math.abs(pos.y - drag.startY) > 5;
+
+                if (isDrag && mapData && mapData.worlds[0]) {
+                    drag.wasDrag = true;
+                    for (const p of mapData.worlds[0].players) {
+                        if (p.id !== drag.playerId) continue;
+                        if (drag.type === 'allcells') {
+                            const startW = screenToWorld(drag.startX, drag.startY);
+                            const dx = wpos.x - startW.x;
+                            const dy = wpos.y - startW.y;
+                            for (const c of p.cells) { c.x += dx; c.y += dy; }
+                        } else {
+                            for (const c of p.cells) {
+                                if (c.id === drag.cellId) { c.x = wpos.x; c.y = wpos.y; break; }
+                            }
+                        }
+                        break;
+                    }
+                    fetch('/api/map/move', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            playerId: drag.playerId,
+                            cellId: drag.cellId,
+                            x: Math.round(wpos.x * 100) / 100,
+                            y: Math.round(wpos.y * 100) / 100,
+                            all: drag.type === 'allcells'
+                        })
+                    }).catch(() => {});
+                    showToast(drag.type === 'allcells' ? 'Jugador movido' : 'Celda movida');
+                }
+
+                for (const p of (mapData && mapData.worlds[0] ? mapData.worlds[0].players : [])) {
+                    for (const c of p.cells) { delete c._dragX; delete c._dragY; }
+                }
+            } else if (drag.active && drag.type === 'border-resize') {
+                if (localBorder) {
+                    const dx = Math.abs(pos.x - drag.startX);
+                    const dy = Math.abs(pos.y - drag.startY);
+                    if (dx > 5 || dy > 5) {
+                        fetch('/api/settings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ worldMapW: Math.round(localBorder.w), worldMapH: Math.round(localBorder.h) })
+                        }).then(r => {
+                            if (r.ok) showToast(`Mundo redimensionado a ${Math.round(localBorder.w*2)}x${Math.round(localBorder.h*2)}`);
+                        }).catch(() => {});
+                    }
+                    localBorder = null;
+                }
+                drag.wasDrag = true;
+            } else if (drag.active && drag.type === 'pan') {
+                drag.wasDrag = true;
+            }
+
+            drag.active = false;
+            canvas.style.cursor = 'grab';
+            render();
+        }
+
+        // Click handler for context popup
+        canvas.addEventListener('click', (e) => {
+            if (drag.active || drag.wasDrag) { drag.wasDrag = false; return; }
+            const pos = getCanvasPos(e);
+            const hit = findCellAt(pos.x, pos.y);
+            if (hit) {
+                showContextPopup(e, hit.player, hit.cell);
+            } else {
+                closeContextPopup();
+            }
+        });
+
+        function onWheel(e) {
+            e.preventDefault();
+            const pos = getCanvasPos(e);
+            const worldBefore = screenToWorld(pos.x, pos.y);
+            const factor = e.deltaY > 0 ? 1 / 1.15 : 1.15;
+            camera.zoom = Math.max(0.01, Math.min(camera.zoom * factor, 20));
+            // Adjust camera so world point under mouse stays
+            const worldAfter = screenToWorld(pos.x, pos.y);
+            camera.x += worldBefore.x - worldAfter.x;
+            camera.y += worldBefore.y - worldAfter.y;
+            render();
+        }
+
+        function onMouseLeave(e) {
+            hoveredPlayer = null;
+            hoveredCell = null;
+            hoveredBorderEdge = null;
+            document.getElementById('map-tooltip').classList.remove('visible');
+            if (!drag.active) {
+                canvas.style.cursor = 'grab';
+            }
+        }
+
+        // ── CONTEXT POPUP ──
+        function showContextPopup(e, player, cell) {
+            closeContextPopup();
+            selectedPlayerForPopup = player;
+            const rect = document.getElementById('map-container').getBoundingClientRect();
+            const popup = document.getElementById('context-popup');
+            const color = colorIntToHex(player.color);
+            popup.innerHTML = `
+                <div class="cptitle">
+                    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:6px;"></span>
+                    ${escHtml(player.name)} (ID: ${player.id})
+                </div>
+                <div class="cprow">
+                    <label>Masa</label>
+                    <input type="number" id="cp-mass" value="${player.score}" min="0">
+                </div>
+                <div class="cpbtns">
+                    <button class="cpbtn-apply" onclick="applyContextMass()">Cambiar masa</button>
+                    <button class="cpbtn-kill" onclick="applyContextKill()">Matar</button>
+                    <button class="cpbtn-merge" onclick="applyContextMerge()">Fusionar</button>
+                    <button class="cpbtn-close" onclick="closeContextPopup()">Cerrar</button>
+                </div>
+            `;
+            let px = e.clientX - rect.left;
+            let py = e.clientY - rect.top;
+            if (px + 220 > rect.width) px = rect.width - 230;
+            if (py + 200 > rect.height) py = rect.height - 210;
+            popup.style.left = px + 'px';
+            popup.style.top = py + 'px';
+            popup.classList.add('visible');
+            setupMassInput('cp-mass');
+        }
+
+        function closeContextPopup() {
+            document.getElementById('context-popup').classList.remove('visible');
+            selectedPlayerForPopup = null;
+        }
+
+        async function applyContextMass() {
+            if (!selectedPlayerForPopup) return;
+            const mass = document.getElementById('cp-mass').value;
+            if (!mass || isNaN(mass)) return;
+            await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `mass ${selectedPlayerForPopup.id} ${mass}` })
+            });
+            showToast('Masa cambiada a ' + mass);
+            closeContextPopup();
+        }
+
+        async function applyContextKill() {
+            if (!selectedPlayerForPopup) return;
+            await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `kill ${selectedPlayerForPopup.id}` })
+            });
+            showToast('Jugador eliminado');
+            closeContextPopup();
+        }
+
+        async function applyContextMerge() {
+            if (!selectedPlayerForPopup) return;
+            await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ command: `merge ${selectedPlayerForPopup.id}` })
+            });
+            showToast('Jugador fusionado');
+            closeContextPopup();
+        }
+
+        // ── CANVAS RENDERING ──
+        function render() {
+            if (!canvas.width || !canvas.height) resizeCanvas();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Background
+            ctx.fillStyle = '#0a0b0f';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!mapData || !mapData.worlds || !mapData.worlds[0]) {
+                ctx.fillStyle = '#555c72';
+                ctx.font = '14px DM Sans, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Esperando datos del servidor...', canvas.width / 2, canvas.height / 2);
+                renderMinimap();
+                renderLeaderboard();
+                renderStats();
+                return;
+            }
+
+            const world = mapData.worlds[0];
+            const border = localBorder || world.border;
+
+            // Grid
+            drawGrid(border);
+
+            // World border
+            drawBorder(border);
+
+            // Players
+            for (const p of world.players) precomputeMaxSize(p);
+
+            const sorted = [...world.players].sort((a, b) => a._maxSize - b._maxSize);
+
+            for (const player of sorted) {
+                if (player.cells.length > 1) {
+                    drawSplitLines(player);
+                }
+                for (const cell of player.cells) {
+                    drawCell(cell, player);
+                }
+            }
+
+            // Minimap
+            renderMinimap();
+
+            // Skip DOM-heavy overlays during drag
+            if (!drag.active) {
+                renderLeaderboard();
+                renderStats();
+            }
+        }
+
+        function precomputeMaxSize(player) {
+            let max = 0;
+            for (const c of player.cells) if (c.size > max) max = c.size;
+            player._maxSize = max;
+        }
+
+        function drawGrid(border) {
+            const minX = border.x - border.w;
+            const maxX = border.x + border.w;
+            const minY = border.y - border.h;
+            const maxY = border.y + border.h;
+
+            // Determine grid spacing based on zoom
+            const worldWidth = maxX - minX;
+            const gridStep = worldWidth / 16; // 16x16 grid lines
+
+            ctx.strokeStyle = 'rgba(30,33,48,0.4)';
+            ctx.lineWidth = 0.5;
+
+            // Only draw visible grid lines
+            const topLeft = screenToWorld(0, 0);
+            const bottomRight = screenToWorld(canvas.width, canvas.height);
+
+            const startX = Math.max(minX, Math.floor(topLeft.x / gridStep) * gridStep);
+            const endX = Math.min(maxX, Math.ceil(bottomRight.x / gridStep) * gridStep);
+            const startY = Math.max(minY, Math.floor(bottomRight.y / gridStep) * gridStep);
+            const endY = Math.min(maxY, Math.ceil(topLeft.y / gridStep) * gridStep);
+
+            for (let x = startX; x <= endX; x += gridStep) {
+                const s = worldToScreen(x, 0);
+                if (s.x < -10 || s.x > canvas.width + 10) continue;
+                const top = worldToScreen(x, maxY);
+                const bot = worldToScreen(x, minY);
+                ctx.beginPath();
+                ctx.moveTo(s.x, top.y);
+                ctx.lineTo(s.x, bot.y);
+                ctx.stroke();
+            }
+
+            for (let y = startY; y <= endY; y += gridStep) {
+                const s = worldToScreen(0, y);
+                if (s.y < -10 || s.y > canvas.height + 10) continue;
+                const left = worldToScreen(minX, y);
+                const right = worldToScreen(maxX, y);
+                ctx.beginPath();
+                ctx.moveTo(left.x, s.y);
+                ctx.lineTo(right.x, s.y);
+                ctx.stroke();
+            }
+        }
+
+        function drawBorder(border) {
+            const b = localBorder || border;
+            const tl = worldToScreen(b.x - b.w, b.y + b.h);
+            const br = worldToScreen(b.x + b.w, b.y - b.h);
+            const w = br.x - tl.x;
+            const h = br.y - tl.y;
+
+            ctx.strokeStyle = 'rgba(240,165,0,0.6)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(tl.x, tl.y, w, h);
+
+            // Highlight hovered/dragged edge
+            const highlight = drag.type === 'border-resize' ? drag.borderEdge : hoveredBorderEdge;
+            if (highlight) {
+                ctx.strokeStyle = 'rgba(240,165,0,0.9)';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                if (highlight === 'left' || highlight.includes('left')) {
+                    ctx.moveTo(tl.x, tl.y); ctx.lineTo(tl.x, br.y);
+                }
+                if (highlight === 'right' || highlight.includes('right')) {
+                    ctx.moveTo(br.x, tl.y); ctx.lineTo(br.x, br.y);
+                }
+                if (highlight === 'top' || highlight.includes('top')) {
+                    ctx.moveTo(tl.x, tl.y); ctx.lineTo(br.x, tl.y);
+                }
+                if (highlight === 'bottom' || highlight.includes('bottom')) {
+                    ctx.moveTo(tl.x, br.y); ctx.lineTo(br.x, br.y);
+                }
+                ctx.stroke();
+            }
+
+            // Corner markers
+            const m = 20;
+            ctx.strokeStyle = 'rgba(240,165,0,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(tl.x + m, tl.y); ctx.lineTo(tl.x, tl.y); ctx.lineTo(tl.x, tl.y + m); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(br.x - m, tl.y); ctx.lineTo(br.x, tl.y); ctx.lineTo(br.x, tl.y + m); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(tl.x + m, br.y); ctx.lineTo(tl.x, br.y); ctx.lineTo(tl.x, br.y - m); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(br.x - m, br.y); ctx.lineTo(br.x, br.y); ctx.lineTo(br.x, br.y - m); ctx.stroke();
+
+            // Dimension label during resize
+            if (localBorder) {
+                ctx.fillStyle = 'rgba(240,165,0,0.8)';
+                ctx.font = '11px "Space Mono", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                const y = Math.min(tl.y, br.y) - 8;
+                ctx.fillText(`⬡ ${Math.round(b.w * 2)} × ${Math.round(b.h * 2)}`, (tl.x + br.x) / 2, y);
+            }
+        }
+
+        function drawCell(cell, player) {
+            const x = cell._dragX !== undefined ? cell._dragX : cell.x;
+            const y = cell._dragY !== undefined ? cell._dragY : cell.y;
+            const pos = worldToScreen(x, y);
+            const r = Math.max(cell.size * camera.zoom, 3);
+
+            if (pos.x + r < -10 || pos.x - r > canvas.width + 10 ||
+                pos.y + r < -10 || pos.y - r > canvas.height + 10) return;
+
+            // Glow
+            const color = colorIntToRgba(player.color, 0.2);
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, r * 1.15, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Main circle
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = colorIntToRgba(player.color, 0.85);
+            ctx.fill();
+            ctx.strokeStyle = colorIntToRgba(player.color, 0.5);
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Highlight
+            const grad = ctx.createRadialGradient(pos.x - r * 0.3, pos.y - r * 0.3, r * 0.05, pos.x, pos.y, r);
+            grad.addColorStop(0, 'rgba(255,255,255,0.25)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0.05)');
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Name (only if large enough)
+            if (r > 20) {
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${Math.min(r * 0.6, 14)}px DM Sans, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                // Text shadow
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(player.name, pos.x, pos.y);
+                ctx.shadowBlur = 0;
+            }
+
+            // Hover highlight
+            if (hoveredCell && hoveredCell.id === cell.id && hoveredPlayer && hoveredPlayer.id === player.id) {
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, r + 3, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        function drawSplitLines(player) {
+            const cells = player.cells;
+            ctx.strokeStyle = colorIntToRgba(player.color, 0.25);
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+
+            for (let i = 0; i < cells.length; i++) {
+                for (let j = i + 1; j < cells.length; j++) {
+                    const a = worldToScreen(
+                        cells[i]._dragX !== undefined ? cells[i]._dragX : cells[i].x,
+                        cells[i]._dragY !== undefined ? cells[i]._dragY : cells[i].y
+                    );
+                    const b = worldToScreen(
+                        cells[j]._dragX !== undefined ? cells[j]._dragX : cells[j].x,
+                        cells[j]._dragY !== undefined ? cells[j]._dragY : cells[j].y
+                    );
+                    ctx.beginPath();
+                    ctx.moveTo(a.x, a.y);
+                    ctx.lineTo(b.x, b.y);
+                    ctx.stroke();
+                }
+            }
+            ctx.setLineDash([]);
+        }
+
+        // ── MINIMAP ──
+        function renderMinimap() {
+            const mw = 140, mh = 140;
+            miniCtx.fillStyle = 'rgba(7,8,9,0.85)';
+            miniCtx.fillRect(0, 0, mw, mh);
+
+            if (!mapData || !mapData.worlds[0]) return;
+
+            const world = mapData.worlds[0];
+            const b = localBorder || world.border;
+            const worldW = b.w * 2;
+            const worldH = b.h * 2;
+            const pad = 4;
+            const scaleX = (mw - pad * 2) / worldW;
+            const scaleY = (mh - pad * 2) / worldH;
+            const scale = Math.min(scaleX, scaleY);
+
+            function toMini(wx, wy) {
+                return {
+                    x: pad + (wx - (b.x - b.w)) * scale,
+                    y: pad + (wy - (b.y - b.h)) * scale
+                };
+            }
+
+            // World border
+            const tl = toMini(b.x - b.w, b.y - b.h);
+            const br = toMini(b.x + b.w, b.y + b.h);
+            miniCtx.strokeStyle = 'rgba(240,165,0,0.5)';
+            miniCtx.lineWidth = 1;
+            miniCtx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+
+            // Viewport rect
+            const vtl = toMini(camera.x - canvas.width / 2 / camera.zoom, camera.y - canvas.height / 2 / camera.zoom);
+            const vbr = toMini(camera.x + canvas.width / 2 / camera.zoom, camera.y + canvas.height / 2 / camera.zoom);
+            miniCtx.strokeStyle = 'rgba(255,255,255,0.25)';
+            miniCtx.lineWidth = 1;
+            miniCtx.strokeRect(vtl.x, vtl.y, vbr.x - vtl.x, vbr.y - vtl.y);
+
+            // Player dots
+            for (const p of world.players) {
+                for (const c of p.cells) {
+                    const pos = toMini(c.x, c.y);
+                    miniCtx.beginPath();
+                    miniCtx.arc(pos.x, pos.y, Math.max(2, c.size * scale), 0, Math.PI * 2);
+                    miniCtx.fillStyle = colorIntToRgba(p.color, 0.8);
+                    miniCtx.fill();
+                }
+            }
+        }
+
+        // ── LEADERBOARD ──
+        function renderLeaderboard() {
+            const el = document.getElementById('leaderboard');
+            if (!mapData || !mapData.worlds[0] || !mapData.worlds[0].players || mapData.worlds[0].players.length === 0) {
+                el.innerHTML = '';
+                return;
+            }
+            const players = [...mapData.worlds[0].players].sort((a, b) => b.score - a.score).slice(0, 10);
+            el.innerHTML = `
+                <div class="leaderboard-title">Leaderboard</div>
+                ${players.map((p, i) => `
+                    <div class="lb-row">
+                        <span class="lb-rank">#${i + 1}</span>
+                        <span class="lb-dot" style="background:${colorIntToHex(p.color)}"></span>
+                        <span class="lb-name">${escHtml(p.name)}</span>
+                        <span class="lb-score">${p.score}</span>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // ── STATS ──
+        function renderStats() {
+            const el = document.getElementById('stats-hud');
+            if (!mapData || !mapData.worlds[0]) {
+                el.innerHTML = '';
+                return;
+            }
+            const stats = mapData.worlds[0].stats;
+            const players = mapData.worlds[0].players || [];
+            const uptime = stats && stats.uptime ? stats.uptime : 0;
+            const days = Math.floor(uptime / 86400);
+            const hours = Math.floor((uptime % 86400) / 3600);
+            const mins = Math.floor((uptime % 3600) / 60);
+            const uptimeStr = days > 0 ? `${days}d ${hours}h` : `${hours}h ${mins}m`;
+            const b = mapData.worlds[0].border;
+            const worldSize = b ? `${Math.round(b.w * 2)}x${Math.round(b.h * 2)}` : '?';
+
+            el.innerHTML = `
+                Jugando: <span>${players.length}</span><br>
+                ${stats ? `Modo: <span>${escHtml(stats.gamemode || '?')}</span><br>` : ''}
+                Mundo: <span>${worldSize}</span><br>
+                ${stats ? `Uptime: <span>${uptimeStr}</span>` : ''}
+            `;
+        }
+
+        // ── WORLD RESET ──
+        function resetWorldSize() {
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ worldMapW: 14000, worldMapH: 14000 })
+            }).then(r => {
+                if (r.ok) showToast('Mundo restablecido a 28000 × 28000');
+            }).catch(() => showToast('Error al restablecer'));
+        }
+
+        // ── ANIMATION LOOP ──
+        function animationLoop() {
+            animating = true;
+            render();
+            animating = false;
+        }
+
+        // ── SIDEBAR RESIZE ──
+        function setupSidebarResize() {
+            const handle = document.getElementById('sidebar-resize-handle');
+            const sidebar = document.getElementById('map-sidebar');
+            if (!handle || !sidebar) return;
+
+            const saved = localStorage.getItem('sidebarWidth');
+            if (saved) sidebar.style.width = saved + 'px';
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                handle.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                const startX = e.clientX;
+                const startW = sidebar.offsetWidth;
+
+                function onMove(ev) {
+                    const newW = Math.max(180, Math.min(startW + ev.clientX - startX, sidebar.parentElement.offsetWidth - 400));
+                    sidebar.style.width = newW + 'px';
+                    render();
+                }
+
+                function onUp() {
+                    handle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    localStorage.setItem('sidebarWidth', sidebar.offsetWidth);
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+
+        // ── SIDEBAR RESIZE END ──
+
+        // ── MAP RESIZE ──
+        function setupMapResize() {
+            const handle = document.getElementById('map-resize-handle');
+            const terminal = document.querySelector('.terminal-section');
+            const main = document.querySelector('.main');
+            if (!handle || !terminal || !main) return;
+
+            const saved = localStorage.getItem('mapTerminalHeight');
+            if (saved) terminal.style.height = saved + 'px';
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                handle.classList.add('active');
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+
+                const startY = e.clientY;
+                const startH = terminal.offsetHeight;
+
+                function onMove(ev) {
+                    const newH = Math.max(80, Math.min(startH + startY - ev.clientY, main.offsetHeight - 100));
+                    terminal.style.height = newH + 'px';
+                    resizeCanvas();
+                    render();
+                }
+
+                function onUp() {
+                    handle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    localStorage.setItem('mapTerminalHeight', terminal.offsetHeight);
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+
+        // ── CONFIG SIDEBAR RESIZE ──
+        function setupConfigResize() {
+            const handle = document.getElementById('config-resize-handle');
+            const panel = document.querySelector('.left-panel');
+            if (!handle || !panel) return;
+
+            const saved = localStorage.getItem('configSidebarWidth');
+            if (saved) panel.style.width = saved + 'px';
+
+            handle.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                handle.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+
+                const startX = e.clientX;
+                const startW = panel.offsetWidth;
+
+                function onMove(ev) {
+                    const newW = Math.max(180, Math.min(startW + ev.clientX - startX, panel.parentElement.offsetWidth - 400));
+                    panel.style.width = newW + 'px';
+                }
+
+                function onUp() {
+                    handle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    localStorage.setItem('configSidebarWidth', panel.offsetWidth);
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        }
+
+        // ── INIT ──
+        function init() {
+            resizeCanvas();
+            loadSettings();
+            loadTemplates();
+            setupMapResize();
+            setupSidebarResize();
+            setupConfigResize();
+            setInterval(updateLogs, 2000);
+            setInterval(fetchMapData, 300);
+            fetchMapData();
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+                render();
+            });
+        }
+
+        // We need the mass modal styling
+        const styleExtra = document.createElement('style');
+        styleExtra.textContent = `
+            .player-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                background: var(--bg);
+                border: 1px solid var(--border);
+                border-radius: 3px;
+                padding: 10px 12px;
+                margin-bottom: 6px;
+                gap: 12px;
+            }
+            .player-info { flex: 1; min-width: 0; }
+            .player-name { color: #e0e3ec; font-weight: 600; font-size: 13px; }
+            .player-meta { display: flex; gap: 12px; margin-top: 2px; }
+            .player-id, .player-score { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; }
+            .player-input-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+            .player-input-group input {
+                width: 110px;
+                padding: 6px 8px;
+                background: var(--surface);
+                border: 1px solid var(--border2);
+                color: var(--text);
+                border-radius: 3px;
+                font-family: 'Space Mono', monospace;
+                font-size: 12px;
+                text-align: right;
+                outline: none;
+            }
+            .mass-list-container { max-height: 320px; overflow-y: auto; }
+            .btn-mass-sm { background: var(--success); color: #0a1a12; }
+        `;
+        document.head.appendChild(styleExtra);
+
+        init();
+    </script>
+</body>
+</html>
