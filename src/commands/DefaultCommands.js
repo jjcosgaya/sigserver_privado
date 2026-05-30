@@ -4,6 +4,13 @@ const { inspect } = require("util");
 
 const Minion = require("../bots/Minion");
 const PlayerBot = require("../bots/PlayerBot");
+const DummyBot = require("../bots/DummyBot");
+
+const Pellet = require("../cells/Pellet");
+const Virus = require("../cells/Virus");
+const EjectedCell = require("../cells/EjectedCell");
+const Mothercell = require("../cells/Mothercell");
+const PlayerCell = require("../cells/PlayerCell");
 
 const IPvalidate = /((^\s*((([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]))\s*$)|(^\s*((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))(%.+)?\s*$))/;
 
@@ -718,6 +725,112 @@ module.exports = (commands, chatCommands) => {
             }
         }),
         genCommand({
+            name: "adddummy",
+            args: "[world id] [mass=61000]",
+            desc: "spawn a stationary dummy cell for practice",
+            /**
+             * @param {ServerHandle} handle
+             */
+            exec: (handle, context, args) => {
+                const worldIds = Object.keys(handle.worlds);
+                if (worldIds.length === 0)
+                    return void handle.logger.print("no worlds available");
+
+                let world, massIdx = -1;
+                if (args.length >= 1) {
+                    const wid = parseInt(args[0]);
+                    if (!isNaN(wid) && handle.worlds.hasOwnProperty(wid)) {
+                        world = handle.worlds[wid];
+                        massIdx = 1;
+                    }
+                }
+                if (!world) {
+                    world = handle.worlds[worldIds[0]];
+                    massIdx = 0;
+                }
+
+                const mass = (massIdx >= 0 && args.length > massIdx) ? parseFloat(args[massIdx]) : 61000;
+                if (isNaN(mass) || mass <= 0)
+                    return void handle.logger.print("invalid mass");
+
+                const dummy = new DummyBot(world, mass);
+                const cell = dummy.player.ownedCells[0];
+                handle.logger.print(
+                    `added dummy (player ${dummy.player.id}) with ${mass} mass to world ${world.id}` +
+                    (cell ? ` at (${Math.round(cell.x)}, ${Math.round(cell.y)})` : "")
+                );
+            }
+        }),
+        genCommand({
+            name: "regendummy",
+            args: "[world id]",
+            desc: "regenerate all dummy cells at their current positions",
+            /**
+             * @param {ServerHandle} handle
+             */
+            exec: (handle, context, args) => {
+                const worldIds = Object.keys(handle.worlds);
+                if (worldIds.length === 0)
+                    return void handle.logger.print("no worlds available");
+
+                let world;
+                if (args.length >= 1) {
+                    const wid = parseInt(args[0]);
+                    if (!isNaN(wid) && handle.worlds.hasOwnProperty(wid))
+                        world = handle.worlds[wid];
+                }
+                if (!world)
+                    world = handle.worlds[worldIds[0]];
+
+                const dummies = DummyBot.getDummiesInWorld(world);
+                if (dummies.length === 0)
+                    return void handle.logger.print("no dummies found in world");
+
+                for (const dummy of dummies) dummy.regenerate();
+                handle.logger.print(`regenerated ${dummies.length} dummy${dummies.length === 1 ? "" : "ies"}`);
+            }
+        }),
+        genCommand({
+            name: "killdummies",
+            args: "[world id]",
+            desc: "kill all dummy cells and spawn a fresh one at center",
+            /**
+             * @param {ServerHandle} handle
+             */
+            exec: (handle, context, args) => {
+                const worldIds = Object.keys(handle.worlds);
+                if (worldIds.length === 0)
+                    return void handle.logger.print("no worlds available");
+
+                let world, massIdx = -1;
+                if (args.length >= 1) {
+                    const wid = parseInt(args[0]);
+                    if (!isNaN(wid) && handle.worlds.hasOwnProperty(wid)) {
+                        world = handle.worlds[wid];
+                        massIdx = 1;
+                    }
+                }
+                if (!world) {
+                    world = handle.worlds[worldIds[0]];
+                    massIdx = 0;
+                }
+
+                const mass = (massIdx >= 0 && args.length > massIdx) ? parseFloat(args[massIdx]) : 61000;
+                if (isNaN(mass) || mass <= 0)
+                    return void handle.logger.print("invalid mass");
+
+                const dummies = DummyBot.getDummiesInWorld(world);
+                for (const dummy of dummies) dummy.close();
+                handle.logger.print(`killed ${dummies.length} dummy${dummies.length === 1 ? "" : "ies"}`);
+
+                const newDummy = new DummyBot(world, mass);
+                const cell = newDummy.player.ownedCells[0];
+                handle.logger.print(
+                    `spawned 1 new dummy at center (${Math.round(cell.x)}, ${Math.round(cell.y)})`
+                );
+            }
+        }),
+        genCommand({
             name: "forbid",
             args: "<IP address / player id>",
             desc: "forbid (ban) specified IP or a connected player",
@@ -861,6 +974,131 @@ module.exports = (commands, chatCommands) => {
                 if (!handle.gamemode.canJoinWorld(handle.worlds[id]))
                     return void chat.directMessage(null, context, "you can't join this world");
                 handle.worlds[id].addPlayer(context.player);
+            }
+        }),
+        genCommand({
+            name: "s",
+            args: "",
+            desc: "save the current world state (all cells, positions, mass)",
+            /**
+             * @param {Connection} context
+             */
+            exec: (handle, context, args) => {
+                const chat = handle.listener.globalChat;
+                if (!context.hasPlayer)
+                    return void chat.directMessage(null, context, "you don't have a player");
+                if (!context.player.hasWorld)
+                    return void chat.directMessage(null, context, "you're not in a world");
+                if (context.player.state !== 0)
+                    return void chat.directMessage(null, context, "you must be alive to save");
+
+                const world = context.player.world;
+                const cells = [];
+                for (const cell of world.cells) {
+                    const entry = { type: cell.type, x: cell.x, y: cell.y, size: cell.size };
+                    switch (cell.type) {
+                        case 0:
+                            entry.playerId = cell.owner.id;
+                            entry.color = cell.color;
+                            entry.name = cell.name;
+                            entry.skin = cell.skin;
+                            break;
+                        case 1:
+                            entry.color = cell.color;
+                            break;
+                        case 2:
+                            break;
+                        case 3:
+                            entry.color = cell.color;
+                            entry.playerId = cell.owner ? cell.owner.id : null;
+                            break;
+                        case 4:
+                            break;
+                    }
+                    cells.push(entry);
+                }
+
+                handle.worldSnapshots.set(world.id, { cells });
+                chat.directMessage(null, context, `saved ${cells.length} cells`);
+            }
+        }),
+        genCommand({
+            name: "r",
+            args: "",
+            desc: "restore the saved world state",
+            /**
+             * @param {Connection} context
+             */
+            exec: (handle, context, args) => {
+                const chat = handle.listener.globalChat;
+                if (!context.hasPlayer)
+                    return void chat.directMessage(null, context, "you don't have a player");
+                if (!context.player.hasWorld)
+                    return void chat.directMessage(null, context, "you're not in a world");
+
+                const world = context.player.world;
+                const snapshot = handle.worldSnapshots.get(world.id);
+                if (!snapshot)
+                    return void chat.directMessage(null, context, "no saved state for this world");
+
+                // remove all existing cells
+                for (const cell of [...world.cells])
+                    world.removeCell(cell);
+
+                let restored = 0;
+                const restoredPlayers = new Set();
+
+                for (const entry of snapshot.cells) {
+                    switch (entry.type) {
+                        case 0: {
+                            const player = handle.players[entry.playerId];
+                            if (!player || !player.hasWorld || player.world !== world) continue;
+                            const cell = new PlayerCell(player, entry.x, entry.y, entry.size);
+                            world.addCell(cell);
+                            restoredPlayers.add(player);
+                            restored++;
+                            break;
+                        }
+                        case 1: {
+                            const cell = new Pellet(world, world, entry.x, entry.y);
+                            cell.size = entry.size;
+                            cell.color = entry.color;
+                            world.addCell(cell);
+                            restored++;
+                            break;
+                        }
+                        case 2: {
+                            const cell = new Virus(world, entry.x, entry.y);
+                            cell.size = entry.size;
+                            world.addCell(cell);
+                            restored++;
+                            break;
+                        }
+                        case 3: {
+                            const owner = handle.players[entry.playerId];
+                            if (!owner) continue;
+                            const cell = new EjectedCell(world, owner, entry.x, entry.y, entry.color);
+                            cell.size = entry.size;
+                            world.addCell(cell);
+                            restored++;
+                            break;
+                        }
+                        case 4: {
+                            const cell = new Mothercell(world, entry.x, entry.y);
+                            cell.size = entry.size;
+                            world.addCell(cell);
+                            restored++;
+                            break;
+                        }
+                    }
+                }
+
+                // update player states so they show as alive
+                for (const player of restoredPlayers)
+                    player.updateState(0);
+
+                world.compileStatistics();
+                chat.directMessage(null, context, `restored ${restored} cells`);
             }
         })
     );

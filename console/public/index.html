@@ -1075,6 +1075,18 @@
                             <button class="pap-center" onclick="applySidebarCenter()">Centrar</button>
                         </div>
                     </div>
+                    <div class="dummy-controls">
+                        <div class="dummy-title">Dummy Cells</div>
+                        <div class="dummy-row">
+                            <label>Masa</label>
+                            <input type="number" id="dummy-mass" value="61000" min="1" step="1000">
+                        </div>
+                        <div class="dummy-btns">
+                            <button class="btn-dummy-add" onclick="addDummy()">Añadir</button>
+                            <button class="btn-dummy-regen" onclick="regenDummy()">Regenerar</button>
+                            <button class="btn-dummy-kill" onclick="killDummies()">Matar + Reset</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
                 <div class="map-container" id="map-container">
@@ -1732,6 +1744,42 @@
             if (!p) return;
             centerOnPlayer(p.id);
             switchView('map');
+        }
+
+        // ── DUMMY CONTROLS ──
+        async function addDummy() {
+            const mass = document.getElementById('dummy-mass').value;
+            if (!mass || isNaN(mass) || parseFloat(mass) <= 0) return showToast('Masa inválida');
+            try {
+                await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: `adddummy ${mass}` })
+                });
+                showToast('Dummy añadido con masa ' + mass);
+            } catch { showToast('Error al añadir dummy'); }
+        }
+
+        async function regenDummy() {
+            try {
+                await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'regendummy' })
+                });
+                showToast('Dummies regenerados');
+            } catch { showToast('Error al regenerar dummies'); }
+        }
+
+        async function killDummies() {
+            try {
+                await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: 'killdummies' })
+                });
+                showToast('Dummies eliminados, 1 nuevo en el centro');
+            } catch { showToast('Error al matar dummies'); }
         }
 
         // ── TOAST ──
@@ -2577,6 +2625,7 @@
             setupMapResize();
             setupSidebarResize();
             setupConfigResize();
+            setupMassInput('dummy-mass');
             setInterval(updateLogs, 2000);
             setInterval(fetchMapData, 300);
             fetchMapData();
@@ -2619,6 +2668,70 @@
             }
             .mass-list-container { max-height: 320px; overflow-y: auto; }
             .btn-mass-sm { background: var(--success); color: #0a1a12; }
+
+            /* ── DUMMY CONTROLS ── */
+            .dummy-controls {
+                flex-shrink: 0;
+                padding: 10px 12px;
+                background: var(--surface2);
+                border-top: 1px solid var(--border2);
+            }
+            .dummy-controls .dummy-title {
+                font-family: 'Space Mono', monospace;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--muted);
+                margin-bottom: 8px;
+            }
+            .dummy-controls .dummy-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: 6px;
+            }
+            .dummy-controls .dummy-row label {
+                font-size: 11px;
+                color: var(--muted);
+                flex-shrink: 0;
+                width: 40px;
+            }
+            .dummy-controls .dummy-row input {
+                flex: 1;
+                padding: 5px 8px;
+                background: var(--bg);
+                border: 1px solid var(--border2);
+                border-radius: 3px;
+                color: var(--text);
+                font-family: 'Space Mono', monospace;
+                font-size: 11px;
+                outline: none;
+                min-width: 0;
+            }
+            .dummy-controls .dummy-row input:focus { border-color: rgba(240,165,0,0.4); }
+            .dummy-controls .dummy-btns {
+                display: flex;
+                gap: 4px;
+            }
+            .dummy-controls .dummy-btns button {
+                flex: 1;
+                padding: 5px 4px;
+                border: none;
+                border-radius: 2px;
+                font-family: 'Space Mono', monospace;
+                font-size: 9px;
+                font-weight: 700;
+                cursor: pointer;
+                text-align: center;
+                transition: filter 0.15s;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+            }
+            .dummy-controls .dummy-btns button:hover { filter: brightness(1.2); }
+            .btn-dummy-add    { background: var(--success); color: #0a1a12; }
+            .btn-dummy-regen  { background: var(--accent);  color: #0d0e12; }
+            .btn-dummy-kill   { background: var(--danger);  color: #fff; }
         `;
         document.head.appendChild(styleExtra);
 

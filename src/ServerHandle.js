@@ -48,6 +48,8 @@ class ServerHandle {
         this.worlds = { };
         /** @type {Identified<Player>} */
         this.players = { };
+        /** @type {Map<number, object>} */
+        this.worldSnapshots = new Map();
 
         this.setSettings(settings);
     }

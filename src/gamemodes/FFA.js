@@ -50,7 +50,7 @@ class FFA extends Gamemode {
      * @param {World} world
      */
     compileLeaderboard(world) {
-        world.leaderboard = world.players.slice(0).filter((v) => !isNaN(v.score)).sort((a, b) => b.score - a.score);
+        world.leaderboard = world.players.slice(0).filter((v) => !isNaN(v.score) && v.router.type !== "dummybot").sort((a, b) => b.score - a.score);
     }
 
     /**
